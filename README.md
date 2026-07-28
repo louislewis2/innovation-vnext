@@ -17,9 +17,10 @@ currently with immediate consistency. It does not implement or try support Event
 ## Tasks Remaining
 
 1. Update readme
-1. Document breaking changes
+1. Document breaking changes and how to move from Innovation to Innovation.vNext
 1. Create wiki
 1. Code review
+1. Profile and improve performance of the dispatcher pipeline for both commands and queries
 
 ## Alpha Warning
 
@@ -29,52 +30,6 @@ This code base and the api surface may still change.
 ## External Dependencies
 
 1. MiniValidation by Damian Edwards [Link](https://github.com/DamianEdwards/MiniValidation). This replaces the outdated self written recursive validator
-
-# Benchmarks
-
-## .NET 10
-
-## ValueStopWatch
-
-|         Method |     Mean |    Error |   StdDev | Allocated |
-|--------------- |---------:|---------:|---------:|----------:|
-| StopWatchUsage | 28.79 ns | 0.108 ns | 0.101 ns |         - |
-
-
-## DataAnnotationsValidatorTests
-
-| Method       | Mean        | Error     | StdDev    | Ratio         | RatioSD | Gen0   | Allocated | Alloc Ratio |
-|------------- |------------:|----------:|----------:|--------------:|--------:|-------:|----------:|------------:|
-| TestCurrent  | 3,018.65 ns | 24.846 ns | 20.748 ns |      baseline |         | 0.3624 |    3808 B |             |
-| TestNew      |   969.43 ns | 13.008 ns | 10.862 ns |  3.11x faster |   0.04x | 0.1373 |    1440 B |  2.64x less |
-
-## BlankCommandDataAnnotationsValidatorTests
-
-| Method              | Mean      | Error    | StdDev   | Ratio        | RatioSD | Gen0   | Allocated | Alloc Ratio |
-|-------------------- |----------:|---------:|---------:|-------------:|--------:|-------:|----------:|------------:|
-| BlankCommandCurrent | 517.57 ns | 9.377 ns | 8.771 ns |     baseline |         | 0.1135 |    1192 B |             |
-| BlankCommandNew     |  96.64 ns | 0.674 ns | 0.563 ns | 5.36x faster |   0.09x | 0.0083 |      88 B | 13.55x less |
-
-## DispatcherCommandTests
-
-## Before
-
-|  Method |     Mean |    Error |   StdDev | Allocated |
-|-------- |---------:|---------:|---------:|----------:|
-| Command | 25.09 ms | 0.468 ms | 0.609 ms |  73.08 KB |
-
-## After
-
-| Method  | Mean     | Error   | StdDev  | Gen0   | Allocated |
-|-------- |---------:|--------:|--------:|-------:|----------:|
-| Command | 232.0 ns | 3.22 ns | 2.69 ns | 0.0134 |     144 B |
-
-
-Old: 40 Operations per second
-New: 4 310 344 Operations per second
-
-1 second = 1 000 000 000 ns
-
 
 ## Dispatcher Command Pipeline
 
@@ -186,5 +141,31 @@ This is to ensure that the dynamic loading capability can be correctly tested.
 In order to build the solution, you will need to following items
 
 1. Visual Studio 2026 >= 18.8.1
-3. Latest .Net9 SDK And Runtime [Download Link](https://dotnet.microsoft.com/en-us/download/dotnet/9.0)
+3. Latest .Net10 SDK And Runtime [Download Link](https://dotnet.microsoft.com/en-us/download/dotnet/10.0)
 
+## Benchmark Results
+
+1 second = 1 000 ms (milliseconds)
+1 second = 1 000 000 us (microseconds)
+1 second = 1 000 000 000 ns (nanoseconds)
+
+### A benchmark class to test the performance of the DataAnnotationsValidator with a BlankCommand.
+| Method          | Mean     | Error    | StdDev   | Gen0   | Allocated |
+|---------------- |---------:|---------:|---------:|-------:|----------:|
+| BlankCommandNew | 43.02 ns | 0.110 ns | 0.092 ns | 0.0023 |      24 B |
+
+Operations per second: 1 000 000 000 / 43.02 = 23 245 002
+
+### A benchmark class to test the performance of the DataAnnotationsValidator with a specific command object (InsertCustomer).
+| Method                | Mean     | Error   | StdDev  | Gen0   | Allocated |
+|---------------------- |---------:|--------:|--------:|-------:|----------:|
+| InsertCustomerCommand | 705.8 ns | 2.58 ns | 2.29 ns | 0.1144 |   1.17 KB |
+
+Operations per second: 1 000 000 000 / 705.8 = 1 416 831
+
+### A benchmark class to test the performance of the Dispatcher with a specific command object (BlankCommand).
+| Method               | Mean     | Error   | StdDev  | Gen0   | Allocated |
+|--------------------- |---------:|--------:|--------:|-------:|----------:|
+| DispatchBlankCommand | 224.6 ns | 2.62 ns | 2.19 ns | 0.0134 |     144 B |
+
+Operations per second: 1 000 000 000 / 224.6 = 4 452 359

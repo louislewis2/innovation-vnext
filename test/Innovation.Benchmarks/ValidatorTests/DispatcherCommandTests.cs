@@ -11,6 +11,9 @@
 
     using Innovation.ApiSample;
 
+    /// <summary>
+    /// A benchmark class to test the performance of the Dispatcher with a specific command object (BlankCommand).
+    /// </summary>
     [MemoryDiagnoser]
     public class DispatcherCommandTests : DependencyBuilderBase
     {
@@ -37,7 +40,7 @@
         }
 
         [Benchmark]
-        public async ValueTask<ICommandResult> Command()
+        public async ValueTask<ICommandResult> DispatchBlankCommand()
         {
             return await dispatcher.Command(command: blankCommand);
         }

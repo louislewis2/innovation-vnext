@@ -10,6 +10,9 @@
     using Innovation.ApiSample.Customers.Commands;
     using Innovation.ApiSample.Customers.Criteria;
 
+    /// <summary>
+    /// A benchmark class to test the performance of the DataAnnotationsValidator with a specific command object (InsertCustomer).
+    /// </summary>
     [MemoryDiagnoser]
     public class DataAnnotationsValidatorTests : DependencyBuilderBase
     {
@@ -31,13 +34,11 @@
         {
             this.serviceProvider = this.GetRequiredService<IServiceProvider>();
             this.dataAnnotationsValidatorNew = new DataAnnotationsValidator(serviceProvider: serviceProvider);
-
-            // This is to warmup the type cache, to make the results comparible with the previous implementation
             MiniValidator.TryValidate(target: insertCustomer, this.serviceProvider, out var errors);
         }
 
         [Benchmark]
-        public async Task<bool> TestNew()
+        public async Task<bool> InsertCustomerCommand()
         {
             var validationResult =  await dataAnnotationsValidatorNew.TryValidateObjectRecursive(target: insertCustomer);
 

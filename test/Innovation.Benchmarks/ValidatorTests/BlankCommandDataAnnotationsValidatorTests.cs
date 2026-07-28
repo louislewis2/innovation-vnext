@@ -9,6 +9,9 @@
 
     using Innovation.ApiSample;
 
+    /// <summary>
+    /// A benchmark class to test the performance of the DataAnnotationsValidator with a BlankCommand.
+    /// </summary>
     [MemoryDiagnoser]
     public class BlankCommandDataAnnotationsValidatorTests : DependencyBuilderBase
     {
