@@ -1,0 +1,27 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <Description>In Process Service Bus</Description>
+        <TargetFramework>net10.0</TargetFramework>
+        <Authors>Louis Lewis</Authors>
+        <Version>1.0.0-alpha1</Version>
+        <PackageTags>Innovation; CQRS, Service Bus, InProcess</PackageTags>
+        <PackageProjectUrl>https://github.com/louislewis2/innovation</PackageProjectUrl>
+        <PackageReleaseNotes>Use DotNet 10</PackageReleaseNotes>
+        <LangVersion>Latest</LangVersion>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="MiniValidation" Version="0.10.0" />
+        <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.10" />
+        <PackageReference Include="System.ComponentModel.Annotations" Version="5.0.0" />
+        <PackageReference Include="Microsoft.Extensions.DependencyModel" Version="10.0.10" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.10" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.10" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Innovation.Api.vNext\Innovation.Api.vNext.csproj" />
+    </ItemGroup>
+
+</Project>

@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFrameworks>net10.0</TargetFrameworks>
+        <NoWarn>CS1591</NoWarn>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.10" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Innovation.Sample.Api\Innovation.Sample.Api.csproj" />
+        <ProjectReference Include="..\Innovation.Sample.Infrastructure\Innovation.Sample.Infrastructure.csproj" />
+    </ItemGroup>
+</Project>

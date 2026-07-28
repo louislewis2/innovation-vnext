@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <Description>Contains types and interfaces that are used to interact with the dispatcher and runtime</Description>
+        <TargetFrameworks>net10.0</TargetFrameworks>
+        <Authors>Louis Lewis</Authors>
+        <Version>1.0.0-alpha1</Version>
+        <PackageTags>Innovation; CQRS</PackageTags>
+        <PackageProjectUrl>https://github.com/louislewis2/innovation</PackageProjectUrl>
+        <PackageReleaseNotes>Use DotNet 10</PackageReleaseNotes>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="System.ComponentModel.Annotations" Version="5.0.0" />
+    </ItemGroup>
+</Project>

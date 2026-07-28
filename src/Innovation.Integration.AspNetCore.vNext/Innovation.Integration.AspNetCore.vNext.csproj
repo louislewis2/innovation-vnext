@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <Description>Contains Helpers For Asp.Net Core. Dispatching Base Class And Correlation Id Support</Description>
+        <TargetFrameworks>net10.0</TargetFrameworks>
+        <Authors>Louis Lewis</Authors>
+        <Version>1.0.0-alpha1</Version>
+        <PackageTags>Innovation; CQRS</PackageTags>
+        <PackageProjectUrl>https://github.com/louislewis2/innovation</PackageProjectUrl>
+        <PackageReleaseNotes>Use DotNet 10</PackageReleaseNotes>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Innovation.Api.vNext\Innovation.Api.vNext.csproj" />
+    </ItemGroup>
+
+</Project>

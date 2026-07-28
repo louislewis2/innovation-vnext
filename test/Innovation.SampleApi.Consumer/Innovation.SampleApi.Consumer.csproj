@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <NoWarn>CS1591</NoWarn>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Octokit" Version="14.0.0" />
+        <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.10" />
+        <PackageReference Include="System.ComponentModel.Annotations" Version="5.0.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\Innovation.Api.vNext\Innovation.Api.vNext.csproj" />
+        <ProjectReference Include="..\Innovation.ApiSample\Innovation.ApiSample.csproj" />
+    </ItemGroup>
+
+</Project>
