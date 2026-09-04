@@ -16,7 +16,7 @@
 
             var dispatcherCommandTests = new DispatcherCommandTests();
             dispatcherCommandTests.GlobalSetup();
-            await dispatcherCommandTests.Command();
+            await dispatcherCommandTests.DispatchBlankCommand();
 
             //var dataAnnotationsValidatorTests = new DataAnnotationsValidatorTests();
             //dataAnnotationsValidatorTests.GlobalSetup();

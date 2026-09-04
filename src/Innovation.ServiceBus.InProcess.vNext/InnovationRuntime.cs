@@ -7,6 +7,7 @@
     using System.Runtime.Loader;
     using System.Collections.Generic;
     using Microsoft.Extensions.Options;
+    using MiniValidation;
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.DependencyModel;
     using Microsoft.Extensions.DependencyInjection;
@@ -207,7 +208,14 @@
                                 HandleCommandBits(commandType: genericArguments[0], commandBitTypes: CommandBitTypes.CorrelationIdAware);
                             }
 
-                            if (this.isValidationEnabled)
+                            // Only set this bit if the global option is enabled AND the command type actually has
+                            // something for DataAnnotationsValidator/MiniValidation to check. This avoids the cost
+                            // of constructing a validator and calling into MiniValidation for commands with nothing
+                            // to validate (e.g. commands that are only validated upstream by ASP.NET model binding).
+                            // Note: this bit is only about DataAnnotations validation - it must not be used to decide
+                            // whether registered IValidator<TCommand> instances run; those are gated by their own
+                            // CommandValidator bit and must always run when registered.
+                            if (this.isValidationEnabled && MiniValidator.RequiresValidation(targetType: genericArguments[0], recurse: true))
                             {
                                 HandleCommandBits(commandType: genericArguments[0], commandBitTypes: CommandBitTypes.IsValidationEnabled);
                             }

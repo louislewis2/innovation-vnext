@@ -200,7 +200,13 @@
 
                 ICommandResult commandResult = null;
                 IValidationResult validationResult = null;
+                AggregateValidationResult aggregateValidationResult = null;
+                var aggregateValidationErrors = this.innovationOptions.AggregateValidationErrors;
 
+                // This bit is only set when the global validation option is enabled AND the command type actually
+                // has something for DataAnnotations/MiniValidation to check (see InnovationRuntime). It must not be
+                // used to decide whether registered IValidator<TCommand> instances run below - those are an
+                // Innovation-library specific concern, gated purely by the CommandValidator bit.
                 if ((commandBitsForCommandType & (1 << (int)CommandBitTypes.IsValidationEnabled)) != 0)
                 {
                     var dataAnnotationsValidator = new DataAnnotationsValidator(serviceProvider: this.serviceScope.ServiceProvider);
@@ -211,40 +217,76 @@
 
                     if (!validatorResult.isValid && validatorResult.Errors?.Count > 0)
                     {
-                        commandResult = new CommandResult(errors: validatorResult.Errors);
+                        if (aggregateValidationErrors)
+                        {
+                            aggregateValidationResult ??= new AggregateValidationResult();
+                            aggregateValidationResult.Merge(errorsToMerge: validatorResult.Errors);
+                        }
+                        else
+                        {
+                            commandResult = new CommandResult(errors: validatorResult.Errors);
+                        }
+                    }
+                }
+
+                // Custom validators always run when registered, regardless of whether global DataAnnotations
+                // validation is enabled, was required for this command type, or already failed above. This must
+                // NOT be conditioned on commandResult (the DataAnnotations outcome) - that was the original bug.
+                if ((commandBitsForCommandType & (1 << (int)CommandBitTypes.CommandValidator)) != 0)
+                {
+                    var commandValidators = this.ResolveCommandValidators<TCommand>();
+
+                    if (commandValidators != null)
+                    {
+                        DispatcherLogging.CommandValidatorsFound(logger: this.logger, commandValidatorCount: commandValidators.Length);
                     }
 
-                    if (validatorResult.isValid)
+                    if (commandValidators != null && commandValidators.Length > 0)
                     {
-                        // If the command has validators registered, process them
-                        if ((commandBitsForCommandType & (1 << (int)CommandBitTypes.CommandValidator)) != 0)
+                        foreach (var commandValidator in commandValidators)
                         {
-                            var commandValidators = this.ResolveCommandValidators<TCommand>();
+                            var intermediateValidationResult = await commandValidator.Validate(command: command);
 
-                            if (commandValidators != null)
+                            if (!intermediateValidationResult.Success)
                             {
-                                DispatcherLogging.CommandValidatorsFound(logger: this.logger, commandValidatorCount: commandValidators.Length);
-                            }
-
-                            if (commandValidators != null && commandValidators.Length > 0)
-                            {
-                                foreach (var commandValidator in commandValidators)
+                                if (aggregateValidationErrors)
                                 {
-                                    var intermediateValidationResult = await commandValidator.Validate(command: command);
+                                    aggregateValidationResult ??= new AggregateValidationResult();
 
-                                    if (!intermediateValidationResult.Success)
+                                    var validatorErrors = intermediateValidationResult.Errors;
+
+                                    if (validatorErrors != null && validatorErrors.Count > 0)
                                     {
-                                        validationResult = intermediateValidationResult;
-
-                                        break;
+                                        aggregateValidationResult.Merge(errorsToMerge: validatorErrors);
                                     }
+                                    else
+                                    {
+                                        aggregateValidationResult.MergeFallback(validatorTypeName: commandValidator.GetType().Name);
+                                    }
+                                }
+                                else
+                                {
+                                    validationResult = intermediateValidationResult;
+
+                                    break;
                                 }
                             }
                         }
                     }
                 }
 
-                var finalResult = validationResult ?? (commandResult == null ? await commandHandler.Handle(command: command) : commandResult.Success ? await commandHandler.Handle(command: command) : commandResult);
+                ICommandResult finalResult;
+
+                if (aggregateValidationErrors)
+                {
+                    finalResult = aggregateValidationResult != null && !aggregateValidationResult.Success
+                        ? aggregateValidationResult
+                        : await commandHandler.Handle(command: command);
+                }
+                else
+                {
+                    finalResult = validationResult ?? (commandResult == null ? await commandHandler.Handle(command: command) : commandResult.Success ? await commandHandler.Handle(command: command) : commandResult);
+                }
 
                 // If the command has result reactors registered, process them
                 if ((commandBitsForCommandType & (1 << (int)CommandBitTypes.CommandResultReactor)) != 0)

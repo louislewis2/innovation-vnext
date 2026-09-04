@@ -5,12 +5,19 @@
     using Microsoft.Extensions.DependencyInjection;
 
     using Innovation.Api.vNext.Dispatching;
+    using Innovation.ServiceBus.InProcess.vNext.Settings;
 
     public class TestBase
     {
         #region Constructor
 
-        public TestBase()
+        public TestBase() : this(configureOptions: null)
+        {
+        }
+
+        // Allows derived test classes to opt into non-default InnovationOptions (e.g. AggregateValidationErrors)
+        // without every other test having to know about it.
+        protected TestBase(Action<InnovationOptions> configureOptions)
         {
             var services = new ServiceCollection();
             services.AddLogging(config =>
@@ -23,7 +30,19 @@
 
             services.AddOptions();
             services.AddConsumer();
-            services.AddInnovationvNext();
+
+            if (configureOptions == null)
+            {
+                services.AddInnovationvNext();
+            }
+            else
+            {
+                services.AddInnovationvNext(innovationOptions =>
+                {
+                    innovationOptions.IsValidationEnabled = true;
+                    configureOptions(innovationOptions);
+                });
+            }
 
             this.ServiceProvider = services.BuildServiceProvider();
         }

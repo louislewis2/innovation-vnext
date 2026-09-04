@@ -7,6 +7,11 @@
         // If false, the dispatcher will not perform validation on commands
         public bool IsValidationEnabled { get; set; }
 
+        // If true, all registered validation (DataAnnotations and IValidator<TCommand>) will run and have their
+        // errors merged into a single result. If false (default), validation fails fast on the first failure
+        // encountered, matching prior behavior.
+        public bool AggregateValidationErrors { get; set; }
+
         // Search locations can contain dll's which will be dynamically loaded and processed
         public string[] SearchLocations { get; set; }
 

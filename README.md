@@ -234,6 +234,6 @@ Operations per second: `1 000 000 000 / 705.8 = 1 416 831`
 ### Dispatcher with `BlankCommand`
 | Method               | Mean     | Error   | StdDev  | Gen0   | Allocated |
 |--------------------- |---------:|--------:|--------:|-------:|----------:|
-| DispatchBlankCommand | 224.6 ns | 2.62 ns | 2.19 ns | 0.0134 |     144 B |
+| DispatchBlankCommand | 172.2 ns | 3.38 ns | 3.76 ns | 0.0091 |      96 B |
 
-Operations per second: `1 000 000 000 / 224.6 = 4 452 359`
+Operations per second: `1 000 000 000 / 172.2 = 5 807 200`
