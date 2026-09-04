@@ -1,0 +1,31 @@
+﻿<Project>
+
+    <!-- Shared packaging metadata for all publishable packages under src\. -->
+    <PropertyGroup>
+        <Authors>Louis Lewis</Authors>
+        <Company>Louis Lewis</Company>
+        <PackageProjectUrl>https://github.com/louislewis2/innovation-vnext</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/louislewis2/innovation-vnext</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+        <IncludeSymbols>true</IncludeSymbols>
+        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+        <EmbedUntrackedSources>true</EmbedUntrackedSources>
+        <PublishRepositoryUrl>true</PublishRepositoryUrl>
+        <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
+        <Deterministic>true</Deterministic>
+    </PropertyGroup>
+
+    <!-- Pack the repository README into every package so nuget.org renders it on the package page. -->
+    <ItemGroup>
+        <None Include="$(MSBuildThisFileDirectory)..\README.md" Pack="true" PackagePath="\" Visible="false" />
+    </ItemGroup>
+
+    <!-- Source Link so consumers can step into the published source from nuget.org symbols. -->
+    <ItemGroup>
+        <PackageReference Include="Microsoft.SourceLink.GitHub" Version="10.0.400" PrivateAssets="All" />
+    </ItemGroup>
+
+</Project>

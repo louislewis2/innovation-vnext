@@ -1,0 +1,99 @@
+name: Publish NuGet Packages
+
+# Runs only when you publish a GitHub Release (not on every push to master).
+# The release's tag becomes the package version, so there is nothing to edit
+# in the csproj files before releasing.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Package version to publish (e.g. 1.2.3 or 1.2.3-beta1). Leave empty to use the current release tag."
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  id-token: write # required for NuGet Trusted Publishing (OIDC)
+
+env:
+  DOTNET_VERSION: "10.0.x"
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  ARTIFACTS_DIR: ${{ github.workspace }}/artifacts
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Resolve package version
+        id: version
+        shell: bash
+        run: |
+          RAW_VERSION="${{ inputs.version }}"
+          if [ -z "$RAW_VERSION" ]; then
+            RAW_VERSION="${{ github.event.release.tag_name }}"
+          fi
+          # Strip an optional leading "v" (e.g. v1.2.3 -> 1.2.3)
+          VERSION="${RAW_VERSION#v}"
+          if [ -z "$VERSION" ]; then
+            echo "::error::No version could be resolved from the release tag or workflow input."
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Resolved package version: $VERSION"
+
+      - name: Restore
+        run: dotnet restore Innovation.vNext.sln
+
+      - name: Build
+        run: dotnet build Innovation.vNext.sln --configuration Release --no-restore -p:Version=${{ steps.version.outputs.version }}
+
+      - name: Test
+        run: dotnet test test/Innovation.ServiceBus.InProcess.Tests/Innovation.ServiceBus.InProcess.Tests.csproj --configuration Release --no-build
+
+      - name: Pack
+        shell: bash
+        run: |
+          set -e
+          projects=(
+            "src/Innovation.Api.vNext/Innovation.Api.vNext.csproj"
+            "src/Innovation.ServiceBus.InProcess.vNext/Innovation.ServiceBus.InProcess.vNext.csproj"
+            "src/Innovation.Integration.AspNetCore.vNext/Innovation.Integration.AspNetCore.vNext.csproj"
+          )
+          for project in "${projects[@]}"; do
+            dotnet pack "$project" \
+              --configuration Release \
+              --no-build \
+              -p:Version=${{ steps.version.outputs.version }} \
+              -o "${{ env.ARTIFACTS_DIR }}"
+          done
+
+      - name: NuGet login (OIDC -> temporary API key)
+        uses: NuGet/login@v1
+        id: nuget-login
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
+      - name: Push packages to NuGet.org
+        shell: bash
+        run: |
+          dotnet nuget push "${{ env.ARTIFACTS_DIR }}/*.nupkg" \
+            --api-key ${{ steps.nuget-login.outputs.NUGET_API_KEY }} \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate
+
+      - name: Upload artifacts to the GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: github.event_name == 'release'
+        with:
+          files: ${{ env.ARTIFACTS_DIR }}/*.nupkg
