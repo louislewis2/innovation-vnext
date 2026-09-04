@@ -13,6 +13,6 @@
         where TQuery : IQuery
         where TQueryResult : IQueryResult
     {
-        Task<TQueryResult> Handle([DisallowNull] TQuery query);
+        ValueTask<TQueryResult> Handle([DisallowNull] TQuery query);
     }
 }

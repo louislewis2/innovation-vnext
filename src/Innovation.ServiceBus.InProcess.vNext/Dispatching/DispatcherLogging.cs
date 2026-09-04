@@ -10,6 +10,7 @@
         #region Fields
 
         public static readonly EventId commandEventId = new EventId(1, "Command");
+        public static readonly EventId queryEventId = new EventId(2, "Query");
 
         private static readonly Action<ILogger, Exception> commandParameterNull = LoggerMessage.Define(
             LogLevel.Error,
@@ -17,9 +18,9 @@
             "Command Cannot Be Null");
 
         private static readonly Action<ILogger, string, string, Type, Exception> contextNotSet = LoggerMessage.Define<string, string, Type>(
-            LogLevel.Debug,
+            LogLevel.Warning,
             commandEventId,
-            "Command {CommandName} Is Context Aware, Context Was Not Set.{correlationId} - {CommandType}");
+            "{EventName} Is Context Aware, Context Was Not Set.{correlationId} - {EventType}");
 
         private static readonly Action<ILogger, Type, Exception> auditStoreFound = LoggerMessage.Define<Type>(
             LogLevel.Debug,
@@ -96,12 +97,32 @@
             commandEventId,
             "Returning From Dispatcher {FinalResult}");
 
+        private static readonly Action<ILogger, Exception> queryParameterNull = LoggerMessage.Define(
+            LogLevel.Error,
+            queryEventId,
+            "Query Cannot Be Null");
+
+        private static readonly Action<ILogger, string, string, Type, Type, Exception> enteredQueryDispatcher = LoggerMessage.Define<string, string, Type, Type>(
+            LogLevel.Debug,
+            queryEventId,
+            "Entered Query Dispatcher. {correlationId} - {QueryName} - {QueryType} - {ResultType}");
+
+        private static readonly Action<ILogger, string, Type, Type, Exception> queryHandlerNotFound = LoggerMessage.Define<string, Type, Type>(
+            LogLevel.Error,
+            queryEventId,
+            "Query Handler Not Found - {QueryName} - {QueryType} - {ResultType}");
+
+        private static readonly Action<ILogger, Type, Type, Exception> queryHandlerFound = LoggerMessage.Define<Type, Type>(
+            LogLevel.Debug,
+            queryEventId,
+            "Found Handler - {HandlerType} - {ResultType}");
+
         #endregion Fields
 
         #region Methods
 
         public static void CommandParameterNull(ILogger logger) => commandParameterNull(logger, null);
-        public static void ContextNotSet(ILogger logger, string commandName, string correlationId, Type commandType) => contextNotSet(logger, commandName, correlationId, commandType, null);
+        public static void ContextNotSet(ILogger logger, string eventName, string correlationId, Type eventType) => contextNotSet(logger, eventName, correlationId, eventType, null);
         public static void AuditStoreFound(ILogger logger, Type auditStoreType) => auditStoreFound(logger, auditStoreType, null);
         public static void EnteredCommandDispatcher(ILogger logger, string correlationId, string commandName, Type commandType) => enteredCommandDispatcher(logger, correlationId, commandName, commandType, null);
         public static void CommandDetail(ILogger logger, ICommand command) => commandDetails(logger, command, null);
@@ -117,6 +138,11 @@
         public static void CommandInitialValidationResult(ILogger logger, string eventName, bool isValid) => commandInitialValidationResult(logger, eventName, isValid, null);
         public static void NotifyingCommandResultReactors(ILogger logger) => notifyingCommandResultReactors(logger, null);
         public static void ReturningFromDispatcher(ILogger logger, bool status) => returningFromDispatcher(logger, status, null);
+
+        public static void QueryParameterNull(ILogger logger) => queryParameterNull(logger, null);
+        public static void EnteredQueryDispatcher(ILogger logger, string correlationId, string queryName, Type queryType, Type queryResultType) => enteredQueryDispatcher(logger, correlationId, queryName, queryType, queryResultType, null);
+        public static void QueryHandlerNotFound(ILogger logger, string queryName, Type queryType, Type queryResultType) => queryHandlerNotFound(logger, queryName, queryType, queryResultType, null);
+        public static void QueryHandlerFound(ILogger logger, Type queryHandlerType, Type queryResultType) => queryHandlerFound(logger, queryHandlerType, queryResultType, null);
 
         #endregion Methods
     }

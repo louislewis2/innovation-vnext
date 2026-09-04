@@ -32,7 +32,7 @@
 
         #region Methods
 
-        public async Task<CustomerDetail> Handle(GetCustomerQuery query)
+        public async ValueTask<CustomerDetail> Handle(GetCustomerQuery query)
         {
             return await Load(query: query);
         }

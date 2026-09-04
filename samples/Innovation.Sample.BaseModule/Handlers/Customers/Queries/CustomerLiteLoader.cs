@@ -36,12 +36,12 @@
 
         #region Methods
 
-        public async Task<CustomerLite> Handle(GetCustomerQuery query)
+        public async ValueTask<CustomerLite> Handle(GetCustomerQuery query)
         {
             return await Load(query: query);
         }
 
-        public async Task<GenericResultsList<CustomerLite>> Handle(QueryPage query)
+        public async ValueTask<GenericResultsList<CustomerLite>> Handle(QueryPage query)
         {
             return await Load(query: query);
         }

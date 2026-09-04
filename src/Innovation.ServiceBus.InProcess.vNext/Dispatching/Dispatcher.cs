@@ -116,9 +116,9 @@
                 {
                     DispatcherLogging.ContextNotSet(
                         logger: this.logger,
-                        commandName: command.EventName,
+                        eventName: command.EventName,
                         correlationId: this.CorrelationId,
-                        commandType: commandType);
+                        eventType: commandType);
                 }
                 else
                 {
@@ -362,27 +362,44 @@
             }
         }
 
-        public async Task<TQueryResult> Query<TQuery, TQueryResult>([DisallowNull] TQuery query) where TQuery : IQuery where TQueryResult : IQueryResult
+        public async ValueTask<TQueryResult> Query<TQuery, TQueryResult>([DisallowNull] TQuery query) where TQuery : IQuery where TQueryResult : IQueryResult
         {
             var stopWatch = new Stopwatch();
             stopWatch.Start();
 
             try
             {
+                if (query == null)
+                {
+                    DispatcherLogging.QueryParameterNull(logger: this.logger);
+
+                    throw new ArgumentNullException(paramName: nameof(query));
+                }
+
                 var auditStore = this.serviceScope.ServiceProvider.GetService<IAuditStore>();
 
                 if (auditStore != null)
                 {
-                    this.logger.LogDebug("Audit Store Found - {AuditStoreType}", auditStore.GetType());
+                    DispatcherLogging.AuditStoreFound(logger: this.logger, auditStoreType: auditStore.GetType());
                 }
 
-                this.logger.LogDebug(3, "Entered Query Dispatcher. {correlationId}", this.CorrelationId);
+                DispatcherLogging.EnteredQueryDispatcher(
+                    logger: this.logger,
+                    correlationId: this.CorrelationId,
+                    queryName: query.EventName,
+                    queryType: query.GetType(),
+                    queryResultType: typeof(TQueryResult));
 
                 var queryHandler = this.Resolve<TQuery, TQueryResult>();
 
                 if (queryHandler == null)
                 {
-                    this.logger.LogError("Query Handler Not Found - {QueryName} - {QueryType} - {ResultType}", query.EventName, query.GetType(), typeof(TQueryResult));
+                    DispatcherLogging.QueryHandlerNotFound(
+                        logger: this.logger,
+                        queryName: query.EventName,
+                        queryType: query.GetType(),
+                        queryResultType: typeof(TQueryResult));
+
                     throw new QueryHandlerNotFoundException(query);
                 }
 
@@ -390,7 +407,11 @@
                 {
                     if (this.Context == null)
                     {
-                        this.logger.LogWarning(1, "Query {QueryName} Is Context Aware, Context Was Not Set.{correlationId} - {CommandType}", query.EventName, this.CorrelationId, query.GetType());
+                        DispatcherLogging.ContextNotSet(
+                            logger: this.logger,
+                            eventName: query.EventName,
+                            correlationId: this.CorrelationId,
+                            eventType: query.GetType());
                     }
                     else
                     {
@@ -398,14 +419,15 @@
                     }
                 }
 
-                if (queryHandler is ICorrelationAware correlationAwareQuery)
+                if (queryHandler is ICorrelationAware correlationAwareQueryHandler)
                 {
-                    correlationAwareQuery.CorrelationId = this.CorrelationId;
+                    correlationAwareQueryHandler.CorrelationId = this.CorrelationId;
                 }
 
-                this.logger.LogDebug(3, "Found Handler - {HandlerType} - {ResultType}", query.GetType(), typeof(TQueryResult));
-
-                this.logger.LogDebug(3, "Calling QueryHandler");
+                DispatcherLogging.QueryHandlerFound(
+                    logger: this.logger,
+                    queryHandlerType: queryHandler.GetType(),
+                    queryResultType: typeof(TQueryResult));
 
                 if (auditStore != null)
                 {
@@ -416,7 +438,7 @@
             }
             catch (Exception ex)
             {
-                this.logger.LogError(ex.Message, ex);
+                this.logger.LogError(exception: ex, message: ex.GetInnerMostMessage());
 
                 throw;
             }
@@ -463,7 +485,7 @@
             }
             catch (Exception ex)
             {
-                this.logger.LogError(ex.Message, ex);
+                this.logger.LogError(exception: ex, message: ex.GetInnerMostMessage());
 
                 throw;
             }
@@ -487,8 +509,8 @@
                     }
                     catch (Exception ex)
                     {
+                        this.logger.LogError(exception: ex, message: ex.GetInnerMostMessage());
                         this.logger.LogDebug($"The Command Reactor: {reactor.GetType()} Raised An Exception");
-                        this.logger.LogError(ex.Message, ex);
                     }
                 });
             }
