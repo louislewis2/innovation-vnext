@@ -14,7 +14,7 @@ on:
         type: string
 
 permissions:
-  contents: read
+  contents: write # required to attach package assets to the GitHub Release
   id-token: write # required for NuGet Trusted Publishing (OIDC)
 
 env:
