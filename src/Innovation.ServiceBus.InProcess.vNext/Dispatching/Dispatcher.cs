@@ -32,6 +32,7 @@
         private readonly ILogger logger;
         private readonly InnovationOptions innovationOptions;
         private readonly InnovationRuntime innovationRuntime;
+        private readonly IReactorWorkQueue reactorWorkQueue;
 
         private static readonly ICommandResult commandResultStatic = new CommandResult();
 
@@ -45,11 +46,13 @@
             ILogger<Dispatcher> logger,
             IServiceScopeFactory serviceScopeFactory,
             IOptions<InnovationOptions> innovationOptionsOptions,
-            InnovationRuntime innovationRuntime)
+            InnovationRuntime innovationRuntime,
+            IReactorWorkQueue reactorWorkQueue)
         {
             this.logger = logger;
             this.innovationOptions = innovationOptionsOptions.Value;
             this.innovationRuntime = innovationRuntime;
+            this.reactorWorkQueue = reactorWorkQueue;
 
             this.serviceScope = serviceScopeFactory.CreateScope();
         }
@@ -150,25 +153,18 @@
                     correlationAwareCommand.CorrelationId = this.CorrelationId;
                 }
 
-                // If the command has reactors registered, process them
+                // If the command has reactors registered, queue them to run safely in the background -
+                // never inline here, and never resolved from this Dispatcher's own scope, since that scope
+                // may be disposed (e.g. an ASP.NET Core request scope) before the reactor gets a chance to run.
                 if ((commandBitsForCommandType & (1 << (int)CommandBitTypes.CommandReactor)) != 0)
                 {
-                    var commandReactors = this.ResolveCommandReactors<TCommand>();
+                    DispatcherLogging.NotifyingCommandReactors(logger: this.logger);
 
-                    if (commandReactors != null)
-                    {
-                        DispatcherLogging.CommandReactorsFound(logger: this.logger, commandReactorCount: commandReactors.Length);
-                    }
-
-                    if (commandReactors.Length > 0)
-                    {
-                        _ = Task.Run(() =>
-                        {
-                            DispatcherLogging.NotifyingCommandReactors(logger: this.logger);
-
-                            this.NotifyCommandReactors(commandReactors: commandReactors, command: command);
-                        });
-                    }
+                    await this.reactorWorkQueue.EnqueueAsync(item: new ReactorWorkItem(
+                        correlationId: this.CorrelationId,
+                        reactorContractType: typeof(ICommandReactor<TCommand>),
+                        command: command,
+                        commandResult: null));
                 }
 
                 // If the command has interceptor registered, process them
@@ -288,30 +284,21 @@
                     finalResult = validationResult ?? (commandResult == null ? await commandHandler.Handle(command: command) : commandResult.Success ? await commandHandler.Handle(command: command) : commandResult);
                 }
 
-                // If the command has result reactors registered, process them
+                // If the command has result reactors registered, queue them to run safely in the background
                 if ((commandBitsForCommandType & (1 << (int)CommandBitTypes.CommandResultReactor)) != 0)
                 {
-                    var commandResultReactors = this.ResolveCommandResultReactors<TCommand>();
+                    DispatcherLogging.NotifyingCommandResultReactors(logger: this.logger);
 
-                    if (commandResultReactors != null)
-                    {
-                        DispatcherLogging.CommandResultReactorsFound(logger: this.logger, commandResultReactorCount: commandResultReactors.Length);
-                    }
-
-                    if (commandResultReactors.Length > 0)
-                    {
-                        _ = Task.Run(() =>
-                        {
-                            DispatcherLogging.NotifyingCommandResultReactors(logger: this.logger);
-
-                            this.NotifyCommandResultReactors(commandResultReactors: commandResultReactors, command: command, commandResult: finalResult);
-                        });
-                    }
+                    await this.reactorWorkQueue.EnqueueAsync(item: new ReactorWorkItem(
+                        correlationId: this.CorrelationId,
+                        reactorContractType: typeof(ICommandResultReactor<TCommand>),
+                        command: command,
+                        commandResult: finalResult));
                 }
 
                 DispatcherLogging.ReturningFromDispatcher(this.logger, finalResult.Success);
 
-                if (this.innovationRuntime.HasAuditStoreRegistered)
+                if (this.innovationRuntime.HasAuditStoreRegistered(this.serviceScope.ServiceProvider))
                 {
                     var auditStore = this.serviceScope.ServiceProvider.GetService<IAuditStore>();
 
@@ -537,62 +524,11 @@
 
         #region Private Methods
 
-        private void NotifyCommandReactors<TCommand>([DisallowNull] ICommandReactor<TCommand>[] commandReactors, [DisallowNull] TCommand command) where TCommand : ICommand
-        {
-            this.logger.LogDebug(4, "Entered NotifyCommandReactors. {correlationId}", this.CorrelationId);
-
-            foreach (var reactor in commandReactors)
-            {
-                _ = Task.Run(async () =>
-                {
-                    try
-                    {
-                        await reactor.React(command);
-                    }
-                    catch (Exception ex)
-                    {
-                        this.logger.LogError(exception: ex, message: ex.GetInnerMostMessage());
-                        this.logger.LogDebug($"The Command Reactor: {reactor.GetType()} Raised An Exception");
-                    }
-                });
-            }
-        }
-
-        private void NotifyCommandResultReactors<TCommand, TCommandResult>([DisallowNull] ICommandResultReactor<TCommand>[] commandResultReactors, [DisallowNull] TCommand command, [DisallowNull] TCommandResult commandResult)
-            where TCommand : ICommand
-            where TCommandResult : ICommandResult
-        {
-            this.logger.LogDebug(5, "Entered NotifyCommandResultReactors. {correlationId}", this.CorrelationId);
-
-
-            foreach (var reactor in commandResultReactors)
-            {
-                _ = Task.Run(async () =>
-                {
-                    try
-                    {
-                        await reactor.React(commandResult, command);
-                    }
-                    catch (Exception ex)
-                    {
-                        this.logger.LogError(5, "Error Occurred NotifyCommandResultReactors. {correlationId} {exceptionMessage }", this.CorrelationId, ex.Message);
-                    }
-                });
-            }
-        }
-
         private ICommandResult CreateFromException([DisallowNull] Exception ex)
         {
             var exceptionResult = new CommandExceptionResult(message: ex.Message, exception: ex);
 
             return exceptionResult;
-        }
-
-        private ICommandReactor<TCommand>[] ResolveCommandReactors<TCommand>() where TCommand : ICommand
-        {
-            var commandReactors = this.serviceScope.ServiceProvider.GetServices<ICommandReactor<TCommand>>();
-
-            return commandReactors.ToArray();
         }
 
         private ICommandInterceptor<TCommand>[] ResolveCommandInterceptors<TCommand>() where TCommand : ICommand

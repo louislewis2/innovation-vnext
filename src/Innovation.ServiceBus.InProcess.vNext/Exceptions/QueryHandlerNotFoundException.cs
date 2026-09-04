@@ -19,6 +19,7 @@
         {
             this.query = query;
         }
+
         #endregion Constructor
 
         #region Properties

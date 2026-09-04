@@ -16,6 +16,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\Innovation.Api.vNext\Innovation.Api.vNext.csproj" />
+        <ProjectReference Include="..\Innovation.ServiceBus.InProcess.vNext\Innovation.ServiceBus.InProcess.vNext.csproj" />
     </ItemGroup>
 
 </Project>

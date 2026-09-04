@@ -52,20 +52,10 @@
             commandEventId,
             "Found {CommandValidatorCount} Command Validators");
 
-        private static readonly Action<ILogger, int, Exception> commandResultReactorsFound = LoggerMessage.Define<int>(
-            LogLevel.Debug,
-            commandEventId,
-            "Found {CommandResultReactorCount} Command Result Reactors");
-
-        private static readonly Action<ILogger, int, Exception> commandReactorsFound = LoggerMessage.Define<int>(
-            LogLevel.Debug,
-            commandEventId,
-            "Found {CommandReactorCount} Command Reactors");
-
         private static readonly Action<ILogger, Exception> notifyingCommandReactors = LoggerMessage.Define(
             LogLevel.Debug,
             commandEventId,
-            "Notifying Command Reactors");
+            "Enqueuing Command Reactors");
 
         private static readonly Action<ILogger, int, Exception> commandInterceptorsFound = LoggerMessage.Define<int>(
             LogLevel.Debug,
@@ -90,7 +80,7 @@
         private static readonly Action<ILogger, Exception> notifyingCommandResultReactors = LoggerMessage.Define(
             LogLevel.Debug,
             commandEventId,
-            "Notifying Command Result Reactors");
+            "Enqueuing Command Result Reactors");
 
         private static readonly Action<ILogger, bool,Exception> returningFromDispatcher = LoggerMessage.Define<bool>(
             LogLevel.Debug,
@@ -129,8 +119,6 @@
         public static void CommandHandlerNotFound(ILogger logger, string eventName, Type commandType) => commandHandlerNotFound(logger, eventName, commandType, null);
         public static void CommandHandlerFound(ILogger logger, Type commandHandlerType) => commandHandlerFound(logger, commandHandlerType, null);
         public static void CommandValidatorsFound(ILogger logger, int commandValidatorCount) => commandValidatorsFound(logger, commandValidatorCount, null);
-        public static void CommandResultReactorsFound(ILogger logger, int commandResultReactorCount) => commandResultReactorsFound(logger, commandResultReactorCount, null);
-        public static void CommandReactorsFound(ILogger logger, int commandReactorCount) => commandReactorsFound(logger, commandReactorCount, null);
         public static void NotifyingCommandReactors(ILogger logger) => notifyingCommandReactors(logger, null);
         public static void CommandInterceptorsFound(ILogger logger, int commandInterceptorCount) => commandInterceptorsFound(logger, commandInterceptorCount, null);
         public static void CommandInterceptorGoingToRun(ILogger logger, Type commandInterceptorType) => commandInterceptorGoingToRun(logger, commandInterceptorType, null);

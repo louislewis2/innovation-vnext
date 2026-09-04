@@ -7,11 +7,12 @@
     using System.Runtime.Loader;
     using System.Collections.Generic;
     using Microsoft.Extensions.Options;
-    using MiniValidation;
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.DependencyModel;
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.DependencyInjection.Extensions;
+
+    using MiniValidation;
 
     using Settings;
     using Dispatching;
@@ -62,7 +63,17 @@
 
         #region Methods
 
-        public bool HasAuditStoreRegistered { get; private set; }
+        // Computed lazily, on first use, against the caller's own live IServiceProvider (never this.serviceProvider,
+        // which is a temporary snapshot taken inside AddInnovationvNext() before any .WithAuditStore<T>() builder
+        // call has had a chance to run). By the time a Dispatcher is actually resolved and calls this, the
+        // application's real DI container is guaranteed to be fully built, so the check is always accurate.
+        // Concurrent first-calls may compute this more than once; the result is deterministic so that's harmless.
+        private bool? hasAuditStoreRegistered;
+
+        public bool HasAuditStoreRegistered(IServiceProvider callerServiceProvider)
+        {
+            return this.hasAuditStoreRegistered ??= callerServiceProvider.GetService<IAuditStore>() != null;
+        }
 
         public int GetCommandBits(in Type commandType)
         {
@@ -72,7 +83,6 @@
         public void Configure()
         {
             this.RegisterHandlers();
-            this.CheckForAuditStore();
             this.LogCommandBits();
         }
 
@@ -439,13 +449,6 @@
             this.commandLookup[key: commandType] = TurnBitOn(value: this.commandLookup[key: commandType], commandBitTypes);
 
             return;
-        }
-
-        private void CheckForAuditStore()
-        {
-            var auditStore = this.serviceProvider.GetService<IAuditStore>();
-
-            this.HasAuditStoreRegistered = auditStore != null;
         }
 
         private void LogCommandBits()

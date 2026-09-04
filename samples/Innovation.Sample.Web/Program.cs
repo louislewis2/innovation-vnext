@@ -34,7 +34,7 @@
             //webApplicationBuilder.Services.AddInnovationvNext();
 
             // Add innovation with audit store
-            webApplicationBuilder.Services.AddInnovationvNext<InnovationAuditStore<PrimaryContext>>();
+            webApplicationBuilder.Services.AddInnovationvNext().WithAuditStore<InnovationAuditStore<PrimaryContext>>();
 
             webApplicationBuilder.Services
                 .AddControllersWithViews()
@@ -63,7 +63,7 @@
                         Version = applicationVersion,
                         Contact = new OpenApiContact 
                         {
-                            Url = new Uri("https://github.com/louislewis2/innovation"),
+                            Url = new Uri("https://github.com/louislewis2/innovation-vnext"),
                             Name = "Innovation Home"
                         }
                     });

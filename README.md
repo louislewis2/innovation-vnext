@@ -25,6 +25,8 @@ Innovation is **CQRS-first** and uses a **mediator-style dispatch pipeline** int
 1. Improve Query Pipeline Performance
 1. Update To .Net 10
 1. Add Benchmarks
+1. Improve Reactor pipeline
+1. Make Reactor pipeline pluggable
 
 ## Tasks Remaining
 
@@ -234,6 +236,6 @@ Operations per second: `1 000 000 000 / 705.8 = 1 416 831`
 ### Dispatcher with `BlankCommand`
 | Method               | Mean     | Error   | StdDev  | Gen0   | Allocated |
 |--------------------- |---------:|--------:|--------:|-------:|----------:|
-| DispatchBlankCommand | 172.2 ns | 3.38 ns | 3.76 ns | 0.0091 |      96 B |
+| DispatchBlankCommand | 171.0 ns | 3.43 ns | 3.04 ns | 0.0052 |      56 B |
 
 Operations per second: `1 000 000 000 / 172.2 = 5 807 200`
