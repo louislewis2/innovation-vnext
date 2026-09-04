@@ -31,6 +31,10 @@ bld/
 [Tt]est[Rr]esult*/
 [Bb]uild[Ll]og.*
 
+# BenchmarkDotNet output (logs + results/*.csv|*.html|*.md), wherever it's generated -
+# repo root when run via `dotnet run` from there, or under a project's bin/ folder
+**/BenchmarkDotNet.Artifacts/
+
 # NUNIT
 *.VisualState.xml
 TestResult.xml

@@ -6,7 +6,7 @@
     using BenchmarkDotNet.Reports;
     using BenchmarkDotNet.Running;
 
-    using Innovation.Benchmarks.ValidatorTests;
+    using Innovation.Benchmarks.PipelineTests;
 
     public class Program
     {
@@ -17,6 +17,32 @@
             var dispatcherCommandTests = new DispatcherCommandTests();
             dispatcherCommandTests.GlobalSetup();
             await dispatcherCommandTests.DispatchBlankCommand();
+
+            var dispatcherQueryTests = new DispatcherQueryTests();
+            dispatcherQueryTests.GlobalSetup();
+            await dispatcherQueryTests.DispatchBlankQuery();
+
+            var dispatcherMessageTests = new DispatcherMessageTests();
+            dispatcherMessageTests.GlobalSetup();
+            await dispatcherMessageTests.DispatchMessage();
+            await dispatcherMessageTests.DispatchMessageFor();
+
+            var pipelineComparisonTests = new DispatcherPipelineComparisonTests();
+            pipelineComparisonTests.GlobalSetup();
+            await pipelineComparisonTests.Blank();
+            await pipelineComparisonTests.ReactorAndResultReactor();
+            await pipelineComparisonTests.Interceptor();
+            await pipelineComparisonTests.DataAnnotationsAndCustomValidator();
+
+            var auditStoreComparisonTests = new AuditStoreComparisonTests();
+            auditStoreComparisonTests.GlobalSetup();
+            await auditStoreComparisonTests.AuditStoreRegistered();
+            await auditStoreComparisonTests.AuditStoreNotRegistered();
+
+            var validationAggregationComparisonTests = new ValidationAggregationComparisonTests();
+            validationAggregationComparisonTests.GlobalSetup();
+            await validationAggregationComparisonTests.FailFast();
+            await validationAggregationComparisonTests.Aggregate();
 
             //var dataAnnotationsValidatorTests = new DataAnnotationsValidatorTests();
             //dataAnnotationsValidatorTests.GlobalSetup();

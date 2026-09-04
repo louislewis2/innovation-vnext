@@ -1,4 +1,4 @@
-﻿namespace Innovation.Benchmarks.ValidatorTests
+﻿namespace Innovation.Benchmarks.PipelineTests
 {
     using BenchmarkDotNet.Attributes;
 

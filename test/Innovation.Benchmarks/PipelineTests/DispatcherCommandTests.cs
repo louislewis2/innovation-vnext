@@ -1,4 +1,4 @@
-﻿namespace Innovation.Benchmarks.ValidatorTests
+﻿namespace Innovation.Benchmarks.PipelineTests
 {
     using System;
     using System.Threading.Tasks;
@@ -13,6 +13,9 @@
 
     /// <summary>
     /// A benchmark class to test the performance of the Dispatcher with a specific command object (BlankCommand).
+    /// Uses DependencyBuilderBase's default (parameterless) constructor, which has no IAuditStore
+    /// registered, so this is the framework's true zero-registration floor - not a typical consumer setup.
+    /// See AuditStoreComparisonTests for the (also common) cost of adding an audit store on top of this.
     /// </summary>
     [MemoryDiagnoser]
     public class DispatcherCommandTests : DependencyBuilderBase

@@ -84,11 +84,11 @@ Innovation.vNext is a ground-up performance pass over the original [Innovation](
 
 | Scenario | Legacy Innovation | Innovation.vNext | Improvement |
 |---|---:|---:|---:|
-| Validate `BlankCommand` (DataAnnotations) | 460.1 ns / 1.07 KB | 43.02 ns / 24 B | **~10.7x faster, ~45x less memory** |
-| Validate `InsertCustomer` (DataAnnotations) | 2.478 us / 3.36 KB | 705.8 ns / 1.17 KB | **~3.5x faster, ~2.9x less memory** |
-| Dispatch `BlankCommand` (end-to-end) | 2.032 us / 2.5 KB | 171.0 ns / 56 B | **~11.9x faster, ~45x less memory** |
+| Validate `BlankCommand` (DataAnnotations) | 460.1 ns / 1.07 KB | 40.17 ns / 24 B | **~11.5x faster, ~45x less memory** |
+| Validate `InsertCustomer` (DataAnnotations) | 2.478 us / 3.36 KB | 737.2 ns / 1.17 KB | **~3.4x faster, ~2.9x less memory** |
+| Dispatch `BlankCommand` (end-to-end, no audit store registered) | 2.032 us / 2.5 KB | 91.81 ns / 24 B | **~22.1x faster, ~104x less memory** |
 
-> Benchmarks are directional: results depend on hardware, runtime, workload shape, and which pipeline behaviors (validation, reactors, interceptors) are enabled. Full methodology and raw results are in [Benchmark Results](#benchmark-results).
+> Benchmarks are directional: results depend on hardware, runtime, workload shape, and which pipeline behaviors (validation, reactors, interceptors, audit store) are enabled. The Dispatch `BlankCommand` row above is measured with **no IAuditStore registered** - it represents the framework's zero-registration floor. Registering an audit store (a common, realistic setup) adds real, measurable cost - see [Benchmark Results](#benchmark-results) for that comparison. Full methodology and raw results are in [Benchmark Results](#benchmark-results).
 
 ---
 
@@ -104,6 +104,8 @@ Innovation.vNext is a ground-up performance pass over the original [Innovation](
 - Added Benchmarks
 - Improved Reactor pipeline
 - Made Reactor pipeline pluggable
+- Expanded benchmark coverage to the full dispatch pipeline (Command/Query/Message/MessageFor, reactors, interceptors, validators, audit store, validation aggregation) - all IO-free
+- Fixed the default benchmark provider to not implicitly register an audit store, so "Blank"/baseline benchmarks measure the framework's true zero-registration floor rather than silently including audit-store overhead; audit-store cost is now tracked explicitly (see Audit Store Comparison Tests)
 
 ### Planned
 
@@ -292,20 +294,79 @@ One primary test project plus two additional test-directory projects used to val
 ### DataAnnotationsValidator with `BlankCommand`
 | Method          | Mean     | Error    | StdDev   | Gen0   | Allocated |
 |---------------- |---------:|---------:|---------:|-------:|----------:|
-| BlankCommandNew | 43.02 ns | 0.110 ns | 0.092 ns | 0.0023 |      24 B |
+| BlankCommandNew | 40.17 ns | 0.081 ns | 0.076 ns | 0.0023 |      24 B |
 
-Operations per second: `1 000 000 000 / 43.02 = 23 245 002`
+Operations per second: `1 000 000 000 / 40.17 = 24 894 199`
 
 ### DataAnnotationsValidator with `InsertCustomer`
 | Method                | Mean     | Error   | StdDev  | Gen0   | Allocated |
 |---------------------- |---------:|--------:|--------:|-------:|----------:|
-| InsertCustomerCommand | 705.8 ns | 2.58 ns | 2.29 ns | 0.1144 |   1.17 KB |
+| InsertCustomerCommand | 737.2 ns | 1.51 ns | 1.41 ns | 0.1144 |   1.17 KB |
 
-Operations per second: `1 000 000 000 / 705.8 = 1 416 831`
+Operations per second: `1 000 000 000 / 737.2 = 1 356 505`
 
-### Dispatcher with `BlankCommand`
+### Dispatcher with `BlankCommand` (no audit store registered)
 | Method               | Mean     | Error   | StdDev  | Gen0   | Allocated |
 |--------------------- |---------:|--------:|--------:|-------:|----------:|
-| DispatchBlankCommand | 171.0 ns | 3.43 ns | 3.04 ns | 0.0052 |      56 B |
+| DispatchBlankCommand | 91.81 ns | 0.832 ns | 0.778 ns | 0.0023 |      24 B |
 
-Operations per second: `1 000 000 000 / 172.2 = 5 807 200`
+Operations per second: `1 000 000 000 / 91.81 = 10 892 275`
+
+> Note: this benchmark - and every "Blank"/baseline benchmark below - uses no `IAuditStore` registration, since `DependencyBuilderBase`'s default constructor intentionally leaves the pipeline at its zero-registration floor. Earlier revisions of this README quoted ~171 ns / 56 B for this scenario; that number actually included an audit store registration and is now reported separately under **Audit Store Comparison Tests** below.
+
+## All Benchmark Results
+
+### Audit Store Comparison Tests
+| Method                  | Mean      | Error    | StdDev   | Ratio        | RatioSD | Gen0   | Allocated | Alloc Ratio |
+|------------------------ |----------:|---------:|---------:|-------------:|--------:|-------:|----------:|------------:|
+| AuditStoreNotRegistered |  96.46 ns | 0.689 ns | 0.644 ns |     baseline |         | 0.0023 |      24 B |             |
+| AuditStoreRegistered    | 166.73 ns | 0.564 ns | 0.440 ns | 1.73x slower |   0.01x | 0.0052 |      56 B | 2.33x more  |
+
+Registering an `IAuditStore` (a common, realistic setup - most consumers will want auditing) adds ~75 ns and an extra allocation per dispatch: an `AuditContext`, plus `SampleAuditStore`'s per-correlation-id `Dictionary`/`List<IEvent>` bookkeeping.
+
+### BlankCommand DataAnnotations Validator Tests
+| Method          | Mean     | Error    | StdDev   | Gen0   | Allocated |
+|---------------- |---------:|---------:|---------:|-------:|----------:|
+| BlankCommandNew | 40.17 ns | 0.081 ns | 0.076 ns | 0.0023 |      24 B |
+
+### DataAnnotations Validator Tests
+| Method                | Mean     | Error   | StdDev  | Gen0   | Allocated |
+|---------------------- |---------:|--------:|--------:|-------:|----------:|
+| InsertCustomerCommand | 737.2 ns | 1.51 ns | 1.41 ns | 0.1144 |   1.17 KB |
+
+### Dispatcher Command Tests
+| Method               | Mean     | Error   | StdDev  | Gen0   | Allocated |
+|--------------------- |---------:|--------:|--------:|-------:|----------:|
+| DispatchBlankCommand | 91.81 ns | 0.832 ns | 0.778 ns | 0.0023 |      24 B |
+
+### Dispatcher Message Tests
+| Method             | Mean     | Error   | StdDev  | Ratio        | RatioSD | Gen0   | Allocated | Alloc Ratio |
+|------------------- |---------:|--------:|--------:|-------------:|--------:|-------:|----------:|------------:|
+| DispatchMessage    |  90.90 ns | 0.522 ns | 0.463 ns |     baseline |         | 0.0083 |      88 B |             |
+| DispatchMessageFor | 316.23 ns | 0.841 ns | 0.786 ns | 3.48x slower |   0.02x | 0.0701 |     736 B | 8.36x more  |
+
+### Dispatcher Pipeline Comparison Tests
+| Method                            | Mean        | Error    | StdDev   | Ratio         | RatioSD | Gen0   | Gen1   | Allocated | Alloc Ratio |
+|---------------------------------- |------------:|---------:|---------:|--------------:|--------:|-------:|-------:|----------:|------------:|
+| Blank                             |    88.06 ns | 0.330 ns | 0.308 ns |      baseline |         | 0.0023 |      - |      24 B |             |
+| ReactorAndResultReactor           |   375.18 ns | 2.188 ns | 1.827 ns |  4.26x slower |   0.02x | 0.0405 | 0.0200 |     423 B | 17.62x more |
+| Interceptor                       |   150.11 ns | 0.599 ns | 0.561 ns |  1.70x slower |   0.01x | 0.0105 |      - |     112 B |  4.67x more |
+| DataAnnotationsAndCustomValidator | 1,474.23 ns | 6.032 ns | 5.642 ns | 16.74x slower |   0.08x | 0.1965 |      - |    2064 B | 86.00x more |
+
+### Dispatcher Query Tests
+| Method             | Mean     | Error   | StdDev  | Gen0   | Allocated |
+|------------------- |---------:|--------:|--------:|-------:|----------:|
+| DispatchBlankQuery | 82.23 ns | 0.478 ns | 0.447 ns | 0.0023 |      24 B |
+
+### Validation Aggregation Comparison Tests
+| Method    | Mean     | Error     | StdDev    | Ratio        | RatioSD | Gen0   | Allocated | Alloc Ratio |
+|---------- |---------:|----------:|----------:|-------------:|--------:|-------:|----------:|------------:|
+| FailFast  | 2.044 us | 0.0086 us | 0.0077 us |     baseline |         | 0.3777 |   3.88 KB |             |
+| Aggregate | 2.157 us | 0.0140 us | 0.0131 us | 1.06x slower |   0.01x | 0.3700 |   3.81 KB | 1.02x less  |
+
+`InsertVendorCommand` fails both DataAnnotations and the custom `InsertVendorAddressValidator` in this benchmark, so `Aggregate` genuinely has two error sets to merge; the ~113 ns difference is the cost of that merge (`AggregateValidationErrors = true`) versus failing fast on the first validator that reports an error (default).
+
+### ValueStopwatch Tests
+| Method         | Mean     | Error    | StdDev   | Allocated |
+|--------------- |---------:|---------:|---------:|----------:|
+| StopWatchUsage | 30.66 ns | 0.012 ns | 0.011 ns |         - |
