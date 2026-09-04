@@ -11,6 +11,7 @@
 
         public static readonly EventId commandEventId = new EventId(1, "Command");
         public static readonly EventId queryEventId = new EventId(2, "Query");
+        public static readonly EventId messageEventId = new EventId(3, "Message");
 
         private static readonly Action<ILogger, Exception> commandParameterNull = LoggerMessage.Define(
             LogLevel.Error,
@@ -107,6 +108,31 @@
             queryEventId,
             "Found Handler - {HandlerType} - {ResultType}");
 
+        private static readonly Action<ILogger, string, Type, Type, string[], Exception> queryForHandlerNotFound = LoggerMessage.Define<string, Type, Type, string[]>(
+            LogLevel.Error,
+            queryEventId,
+            "Query Handlers Not Found - {QueryName} - {QueryType} - {ResultType} - {Addresses}");
+
+        private static readonly Action<ILogger, Exception> messageParameterNull = LoggerMessage.Define(
+            LogLevel.Error,
+            messageEventId,
+            "Message Cannot Be Null");
+
+        private static readonly Action<ILogger, string, string, Type, Exception> enteredMessageDispatcher = LoggerMessage.Define<string, string, Type>(
+            LogLevel.Debug,
+            messageEventId,
+            "Entered Message Dispatcher. {correlationId} - {MessageName} - {MessageType}");
+
+        private static readonly Action<ILogger, int, Exception> messageHandlersFound = LoggerMessage.Define<int>(
+            LogLevel.Debug,
+            messageEventId,
+            "Found {MessageHandlerCount} Message Handlers");
+
+        private static readonly Action<ILogger, string, Type, string[], Exception> messageForHandlersNotFound = LoggerMessage.Define<string, Type, string[]>(
+            LogLevel.Error,
+            messageEventId,
+            "Addressable Message Handlers Not Found - {MessageName} - {MessageType} - {Addresses}");
+
         #endregion Fields
 
         #region Methods
@@ -131,6 +157,12 @@
         public static void EnteredQueryDispatcher(ILogger logger, string correlationId, string queryName, Type queryType, Type queryResultType) => enteredQueryDispatcher(logger, correlationId, queryName, queryType, queryResultType, null);
         public static void QueryHandlerNotFound(ILogger logger, string queryName, Type queryType, Type queryResultType) => queryHandlerNotFound(logger, queryName, queryType, queryResultType, null);
         public static void QueryHandlerFound(ILogger logger, Type queryHandlerType, Type queryResultType) => queryHandlerFound(logger, queryHandlerType, queryResultType, null);
+        public static void QueryForHandlerNotFound(ILogger logger, string queryName, Type queryType, Type queryResultType, string[] addresses) => queryForHandlerNotFound(logger, queryName, queryType, queryResultType, addresses, null);
+
+        public static void MessageParameterNull(ILogger logger) => messageParameterNull(logger, null);
+        public static void EnteredMessageDispatcher(ILogger logger, string correlationId, string messageName, Type messageType) => enteredMessageDispatcher(logger, correlationId, messageName, messageType, null);
+        public static void MessageHandlersFound(ILogger logger, int messageHandlerCount) => messageHandlersFound(logger, messageHandlerCount, null);
+        public static void MessageForHandlersNotFound(ILogger logger, string messageName, Type messageType, string[] addresses) => messageForHandlersNotFound(logger, messageName, messageType, addresses, null);
 
         #endregion Methods
     }

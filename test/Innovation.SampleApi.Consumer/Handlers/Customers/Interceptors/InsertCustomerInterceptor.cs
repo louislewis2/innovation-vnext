@@ -28,7 +28,7 @@
 
         #region Methods
 
-        public async Task Intercept(InsertCustomerCommand command)
+        public async ValueTask Intercept(InsertCustomerCommand command)
         {
             await this.HandleIntercept(command: command);
         }

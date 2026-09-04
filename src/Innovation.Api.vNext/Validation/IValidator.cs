@@ -7,6 +7,6 @@
 
     public interface IValidator<in TCommand> where TCommand : ICommand
     {
-        Task<IValidationResult> Validate([DisallowNull] TCommand command);
+        ValueTask<IValidationResult> Validate([DisallowNull] TCommand command);
     }
 }

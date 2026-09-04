@@ -7,6 +7,6 @@
 
     public interface ICommandInterceptor<in TCommand> where TCommand : ICommand
     {
-        Task Intercept([DisallowNull] TCommand command);
+        ValueTask Intercept([DisallowNull] TCommand command);
     }
 }

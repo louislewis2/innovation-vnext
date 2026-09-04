@@ -28,7 +28,7 @@
 
         #region Methods
 
-        public async Task<IValidationResult> Validate(InsertVendorCommand command)
+        public ValueTask<IValidationResult> Validate(InsertVendorCommand command)
         {
             var sampleValidationResult = new SampleValidationResult();
 
@@ -48,7 +48,7 @@
                 }
             }
 
-            return await Task.FromResult(sampleValidationResult);
+            return new ValueTask<IValidationResult>(result: sampleValidationResult);
         }
 
         #endregion Methods

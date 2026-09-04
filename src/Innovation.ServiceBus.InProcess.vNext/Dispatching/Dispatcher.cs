@@ -2,7 +2,6 @@
 {
     using System;
     using System.Linq;
-    using System.Diagnostics;
     using System.Threading.Tasks;
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
@@ -25,7 +24,7 @@
     /// <summary>
     /// This is the implementation of the dispatcher for the in process service bus.
     /// </summary>
-    public class Dispatcher : IDispatcher
+    public class Dispatcher : IDispatcher, IDisposable
     {
         #region Fields
 
@@ -33,8 +32,6 @@
         private readonly InnovationOptions innovationOptions;
         private readonly InnovationRuntime innovationRuntime;
         private readonly IReactorWorkQueue reactorWorkQueue;
-
-        private static readonly ICommandResult commandResultStatic = new CommandResult();
 
         private IServiceScope serviceScope;
 
@@ -80,6 +77,18 @@
         {
             this.Context = dispatcherContext ?? throw new ArgumentNullException(paramName: nameof(dispatcherContext));
             this.Context.SetCorrelationId(correlationId: this.CorrelationId);
+        }
+
+        // Dispatcher is registered Transient (see ServiceCollectionExtensions), and the constructor eagerly
+        // creates its own IServiceScope so resolutions made through this.serviceScope never depend on the
+        // caller's ambient scope surviving. Because the type is Transient, the DI container automatically
+        // tracks and disposes any instance it creates that implements IDisposable when the scope that created
+        // it is disposed - so implementing Dispose here (rather than requiring callers to do so) is enough to
+        // release this.serviceScope, and everything resolved through it, without any behavioral change for
+        // existing callers.
+        public void Dispose()
+        {
+            this.serviceScope?.Dispose();
         }
 
         public async ValueTask<ICommandResult> Command<TCommand>([DisallowNull] TCommand command, bool suppressExceptions = true) where TCommand : ICommand
@@ -329,72 +338,111 @@
             }
         }
 
-        public async Task Message<TMessage>([DisallowNull] TMessage message) where TMessage : IMessage
+        public async ValueTask Message<TMessage>([DisallowNull] TMessage message) where TMessage : IMessage
         {
-            var stopWatch = new Stopwatch();
-            stopWatch.Start();
+            var stopWatch = ValueStopwatch.StartNew();
 
-            this.logger.LogDebug(2, "Entered Message Dispatcher. {correlationId}", this.CorrelationId);
-
-            var auditStore = this.serviceScope.ServiceProvider.GetService<IAuditStore>();
-
-            if (auditStore != null)
+            try
             {
-                this.logger.LogDebug("Audit Store Found - {AuditStoreType}", auditStore.GetType());
+                if (message == null)
+                {
+                    DispatcherLogging.MessageParameterNull(logger: this.logger);
+                    throw new ArgumentNullException(paramName: nameof(message));
+                }
+
+                DispatcherLogging.EnteredMessageDispatcher(
+                    logger: this.logger,
+                    correlationId: this.CorrelationId,
+                    messageName: message.EventName,
+                    messageType: message.GetType());
+
+                var auditStore = this.serviceScope.ServiceProvider.GetService<IAuditStore>();
+
+                if (auditStore != null)
+                {
+                    DispatcherLogging.AuditStoreFound(logger: this.logger, auditStoreType: auditStore.GetType());
+                }
+
+                var handlers = this.ResolveMessageHandlers<TMessage>();
+
+                DispatcherLogging.MessageHandlersFound(logger: this.logger, messageHandlerCount: handlers.Length);
+
+                if (auditStore != null)
+                {
+                    await auditStore.Log(auditContext: new AuditContext(correlationId: this.CorrelationId, runtimeMilliSeconds: (long)stopWatch.GetElapsedTime().TotalMilliseconds), message: message);
+                }
+
+                foreach (var handler in handlers)
+                {
+                    await handler.Handle(message: message);
+                }
             }
-
-            var handlers = this.ResolveMessageHandlers<TMessage>();
-
-            if (auditStore != null)
+            catch (Exception ex)
             {
-                await auditStore.Log(auditContext: new AuditContext(correlationId: this.CorrelationId, runtimeMilliSeconds: stopWatch.ElapsedMilliseconds), message: message);
-            }
+                this.logger.LogError(exception: ex, message: ex.GetInnerMostMessage());
 
-            foreach (var handler in handlers)
-            {
-                await Task.Run(() => handler.Handle(message));
+                throw;
             }
         }
 
-        public async Task MessageFor<TMessage>([DisallowNull] TMessage message, [DisallowNull] params string[] addresses) where TMessage : IMessage
+        public async ValueTask MessageFor<TMessage>([DisallowNull] TMessage message, [DisallowNull] params string[] addresses) where TMessage : IMessage
         {
-            var stopWatch = new Stopwatch();
-            stopWatch.Start();
+            var stopWatch = ValueStopwatch.StartNew();
 
-            this.logger.LogDebug(2, "Entered MessageFor Dispatcher. {correlationId}", this.CorrelationId);
-
-            var auditStore = this.serviceScope.ServiceProvider.GetService<IAuditStore>();
-
-            if (auditStore != null)
+            try
             {
-                this.logger.LogDebug("Audit Store Found - {AuditStoreType}", auditStore.GetType());
+                if (message == null)
+                {
+                    DispatcherLogging.MessageParameterNull(logger: this.logger);
+                    throw new ArgumentNullException(paramName: nameof(message));
+                }
+
+                DispatcherLogging.EnteredMessageDispatcher(
+                    logger: this.logger,
+                    correlationId: this.CorrelationId,
+                    messageName: message.EventName,
+                    messageType: message.GetType());
+
+                var auditStore = this.serviceScope.ServiceProvider.GetService<IAuditStore>();
+
+                if (auditStore != null)
+                {
+                    DispatcherLogging.AuditStoreFound(logger: this.logger, auditStoreType: auditStore.GetType());
+                }
+
+                var handlers = this.ResolveMessageHandlers<TMessage>();
+
+                var addressableHandlers = handlers.OfType<IAddressable>().Where(x => x.Handles.Intersect(addresses).Any()).Cast<IMessageHandler<TMessage>>().ToArray();
+
+                if (addressableHandlers.Length == 0)
+                {
+                    DispatcherLogging.MessageForHandlersNotFound(logger: this.logger, messageName: message.EventName, messageType: message.GetType(), addresses: addresses);
+                    return;
+                }
+
+                DispatcherLogging.MessageHandlersFound(logger: this.logger, messageHandlerCount: addressableHandlers.Length);
+
+                if (auditStore != null)
+                {
+                    await auditStore.Log(auditContext: new AuditContext(correlationId: this.CorrelationId, runtimeMilliSeconds: (long)stopWatch.GetElapsedTime().TotalMilliseconds), message: message);
+                }
+
+                foreach (var handler in addressableHandlers)
+                {
+                    await handler.Handle(message: message);
+                }
             }
-
-            var handlers = this.ResolveMessageHandlers<TMessage>();
-
-            var addressableHandlers = handlers.OfType<IAddressable>().Where(x => x.Handles.Intersect(addresses).Any()).Cast<IMessageHandler<TMessage>>();
-
-            if (addressableHandlers == null || !addressableHandlers.Any())
+            catch (Exception ex)
             {
-                this.logger.LogError("Addressable Message Handlers Not Found - {MessageName} - {MessageType} - {Addresses}", message.EventName, message.GetType(), addresses);
-                return;
-            }
+                this.logger.LogError(exception: ex, message: ex.GetInnerMostMessage());
 
-            if (auditStore != null)
-            {
-                await auditStore.Log(auditContext: new AuditContext(correlationId: this.CorrelationId, runtimeMilliSeconds: stopWatch.ElapsedMilliseconds), message: message);
-            }
-
-            foreach (var handler in addressableHandlers)
-            {
-                await Task.Run(() => handler.Handle(message));
+                throw;
             }
         }
 
         public async ValueTask<TQueryResult> Query<TQuery, TQueryResult>([DisallowNull] TQuery query) where TQuery : IQuery where TQueryResult : IQueryResult
         {
-            var stopWatch = new Stopwatch();
-            stopWatch.Start();
+            var stopWatch = ValueStopwatch.StartNew();
 
             try
             {
@@ -460,7 +508,7 @@
 
                 if (auditStore != null)
                 {
-                    await auditStore.Log(auditContext: new AuditContext(correlationId: this.CorrelationId, runtimeMilliSeconds: stopWatch.ElapsedMilliseconds), query: query);
+                    await auditStore.Log(auditContext: new AuditContext(correlationId: this.CorrelationId, runtimeMilliSeconds: (long)stopWatch.GetElapsedTime().TotalMilliseconds), query: query);
                 }
 
                 return await queryHandler.Handle(query);
@@ -473,41 +521,59 @@
             }
         }
 
-        public async Task<TQueryResult> QueryFor<TQuery, TQueryResult>([DisallowNull] TQuery query, [DisallowNull] params string[] addresses) where TQuery : IQuery where TQueryResult : IQueryResult
+        public async ValueTask<TQueryResult> QueryFor<TQuery, TQueryResult>([DisallowNull] TQuery query, [DisallowNull] params string[] addresses) where TQuery : IQuery where TQueryResult : IQueryResult
         {
-            var stopWatch = new Stopwatch();
-            stopWatch.Start();
+            var stopWatch = ValueStopwatch.StartNew();
 
             try
             {
-                this.logger.LogDebug(3, "Entered Query Dispatcher. {correlationId}", this.CorrelationId);
+                if (query == null)
+                {
+                    DispatcherLogging.QueryParameterNull(logger: this.logger);
+
+                    throw new ArgumentNullException(paramName: nameof(query));
+                }
+
+                DispatcherLogging.EnteredQueryDispatcher(
+                    logger: this.logger,
+                    correlationId: this.CorrelationId,
+                    queryName: query.EventName,
+                    queryType: query.GetType(),
+                    queryResultType: typeof(TQueryResult));
 
                 var auditStore = this.serviceScope.ServiceProvider.GetService<IAuditStore>();
 
                 if (auditStore != null)
                 {
-                    this.logger.LogDebug("Audit Store Found - {AuditStoreType}", auditStore.GetType());
+                    DispatcherLogging.AuditStoreFound(logger: this.logger, auditStoreType: auditStore.GetType());
                 }
 
                 var queryHandlers = this.ResolveAll<TQuery, TQueryResult>();
 
-                var addressableHandlers = queryHandlers.OfType<IAddressable>().Where(x => x.Handles.Intersect(addresses).Any()).Cast<IQueryHandler<TQuery, TQueryResult>>();
+                var addressableHandlers = queryHandlers.OfType<IAddressable>().Where(x => x.Handles.Intersect(addresses).Any()).Cast<IQueryHandler<TQuery, TQueryResult>>().ToArray();
 
-                if (addressableHandlers == null || !addressableHandlers.Any())
+                if (addressableHandlers.Length == 0)
                 {
-                    this.logger.LogError("Query Handlers Not Found - {QueryName} - {QueryType} - {ResultType} - {Addresses}", query.EventName, query.GetType(), typeof(TQueryResult), addresses);
+                    DispatcherLogging.QueryForHandlerNotFound(
+                        logger: this.logger,
+                        queryName: query.EventName,
+                        queryType: query.GetType(),
+                        queryResultType: typeof(TQueryResult),
+                        addresses: addresses);
+
                     throw new QueryHandlerNotFoundException(query);
                 }
 
-                var queryHandler = addressableHandlers.First();
+                var queryHandler = addressableHandlers[0];
 
-                this.logger.LogDebug(3, "Found Handler - {HandlerType} - {ResultType}", query.GetType(), typeof(TQueryResult));
-
-                this.logger.LogDebug(3, "Calling QueryHandler");
+                DispatcherLogging.QueryHandlerFound(
+                    logger: this.logger,
+                    queryHandlerType: queryHandler.GetType(),
+                    queryResultType: typeof(TQueryResult));
 
                 if (auditStore != null)
                 {
-                    await auditStore.Log(auditContext: new AuditContext(correlationId: this.CorrelationId, runtimeMilliSeconds: stopWatch.ElapsedMilliseconds), query: query);
+                    await auditStore.Log(auditContext: new AuditContext(correlationId: this.CorrelationId, runtimeMilliSeconds: (long)stopWatch.GetElapsedTime().TotalMilliseconds), query: query);
                 }
 
                 return await queryHandler.Handle(query);
@@ -536,13 +602,6 @@
             var commandInterceptors = this.serviceScope.ServiceProvider.GetServices<ICommandInterceptor<TCommand>>();
 
             return commandInterceptors.ToArray();
-        }
-
-        private ICommandResultReactor<TCommand>[] ResolveCommandResultReactors<TCommand>() where TCommand : ICommand
-        {
-            var commandResultReactors = this.serviceScope.ServiceProvider.GetServices<ICommandResultReactor<TCommand>>();
-
-            return commandResultReactors.ToArray();
         }
 
         private IMessageHandler<TMessage>[] ResolveMessageHandlers<TMessage>() where TMessage : IMessage
