@@ -33,6 +33,12 @@
         // giving up and letting the process exit anyway.
         public System.TimeSpan ReactorQueueShutdownDrainTimeout { get; set; } = System.TimeSpan.FromSeconds(5);
 
+        // When true (default), InnovationRuntime.Configure() throws MissingHandlersException immediately at
+        // startup if any discovered ICommand/IQuery type has no registered handler, instead of only failing
+        // the first time that specific command/query is actually dispatched. Set to false to fall back to
+        // logging an error per missing handler instead of preventing the app from starting.
+        public bool FailFastOnMissingHandlers { get; set; } = true;
+
         #endregion Properties
     }
 }

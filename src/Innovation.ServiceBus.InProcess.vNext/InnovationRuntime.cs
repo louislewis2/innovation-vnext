@@ -5,6 +5,7 @@
     using System.Linq;
     using System.Reflection;
     using System.Runtime.Loader;
+    using System.Collections.Frozen;
     using System.Collections.Generic;
     using Microsoft.Extensions.Options;
     using Microsoft.Extensions.Logging;
@@ -16,6 +17,7 @@
 
     using Settings;
     using Dispatching;
+    using Exceptions;
     using Api.vNext.Core;
     using Api.vNext.Querying;
     using Api.vNext.Reactions;
@@ -41,6 +43,20 @@
         private readonly bool isValidationEnabled;
         private readonly InnovationOptions innovationOptions;
         private readonly Dictionary<Type, int> commandLookup = new Dictionary<Type, int>();
+
+        // Built once at the end of Configure(), from commandLookup, and used for every subsequent per-dispatch
+        // lookup. commandLookup is only ever written to during assembly scanning, so once Configure() has run the
+        // contents are fixed - a FrozenDictionary gives a faster read-only lookup for exactly that access pattern.
+        // Stays null until Configure() completes so GetCommandBits keeps working if it is somehow called earlier.
+        private FrozenDictionary<Type, int> frozenCommandLookup;
+
+        // Every ICommand/IQuery type discovered while scanning assemblies, regardless of whether a handler
+        // was found for it - used purely to validate, at startup, that every discovered command/query has a
+        // handler registered somewhere. queriesWithHandlers mirrors commandLookup's CommandHandlerRegistered
+        // bit, but for queries, which otherwise have no bitmask tracking at all.
+        private readonly HashSet<Type> discoveredCommandTypes = new HashSet<Type>();
+        private readonly HashSet<Type> discoveredQueryTypes = new HashSet<Type>();
+        private readonly HashSet<Type> queriesWithHandlers = new HashSet<Type>();
 
         #endregion Fields
 
@@ -77,13 +93,27 @@
 
         public int GetCommandBits(in Type commandType)
         {
-            return this.commandLookup[key: commandType];
+            // TryGetValue rather than the plain indexer: a command type that genuinely has no handler
+            // registered anywhere is never added to commandLookup (see RegisterHandlers), so falling back to
+            // 0/Unknown here (instead of throwing KeyNotFoundException) lets Dispatcher.Command fall through
+            // to its normal, friendly CommandHandlerNotFoundException path.
+            var lookup = this.frozenCommandLookup;
+
+            if (lookup != null)
+            {
+                return lookup.TryGetValue(key: commandType, value: out var frozenBits) ? frozenBits : 0;
+            }
+
+            return this.commandLookup.TryGetValue(key: commandType, value: out var bits) ? bits : 0;
         }
 
         public void Configure()
         {
             this.RegisterHandlers();
             this.LogCommandBits();
+            this.ValidateHandlersRegistered();
+
+            this.frozenCommandLookup = this.commandLookup.ToFrozenDictionary();
         }
 
         #endregion Methods
@@ -170,6 +200,30 @@
                     this.logger.LogDebug("No Defined Types Found");
 
                     continue;
+                }
+
+                // Records every concrete ICommand/IQuery type in this assembly, whether or not it turns out to
+                // have a handler - the handler-discovery loop below only ever looks at types with a generic
+                // interface (handlers/reactors/interceptors/validators), so a command/query with no handler at
+                // all would otherwise never be seen anywhere.
+                foreach (var type in types)
+                {
+                    if (type.IsAbstract || type.IsInterface)
+                    {
+                        continue;
+                    }
+
+                    var asType = type.AsType();
+
+                    if (typeof(ICommand).IsAssignableFrom(asType))
+                    {
+                        this.discoveredCommandTypes.Add(asType);
+                    }
+
+                    if (typeof(IQuery).IsAssignableFrom(asType))
+                    {
+                        this.discoveredQueryTypes.Add(asType);
+                    }
                 }
 
                 foreach (var type in types.Where(x => x.ImplementedInterfaces.Any(y => y.GenericTypeArguments.Any())))
@@ -280,6 +334,11 @@
                             if (genericArguments != null && genericArguments.Count() == 2)
                             {
                                 this.logger.LogDebug("{TypeName} Handles {QueryName} Returning {QueryResultName}", type.Name, genericArguments[0].Name, genericArguments[1].Name);
+                            }
+
+                            if (genericArguments != null && genericArguments.Length > 0)
+                            {
+                                this.queriesWithHandlers.Add(genericArguments[0]);
                             }
 
                             this.services.TryAddTransient(queryHandlerInterface, type.AsType());
@@ -472,6 +531,41 @@
             }
 
             this.logger.LogDebug(message: $"#################### End ####################");
+        }
+
+        // Cross-checks every discovered ICommand/IQuery type (see RegisterHandlers) against the handlers that
+        // were actually registered. Runs once, eagerly, from Configure() - i.e. during service registration/
+        // app startup, never on a per-request path - so a missing handler is caught immediately instead of
+        // only being discovered the first time that specific command/query is actually dispatched.
+        private void ValidateHandlersRegistered()
+        {
+            var commandTypesWithoutHandlers = this.discoveredCommandTypes
+                .Where(commandType => (this.GetCommandBits(commandType: commandType) & (1 << (int)CommandBitTypes.CommandHandlerRegistered)) == 0)
+                .ToArray();
+
+            var queryTypesWithoutHandlers = this.discoveredQueryTypes
+                .Where(queryType => !this.queriesWithHandlers.Contains(queryType))
+                .ToArray();
+
+            if (commandTypesWithoutHandlers.Length == 0 && queryTypesWithoutHandlers.Length == 0)
+            {
+                return;
+            }
+
+            foreach (var commandType in commandTypesWithoutHandlers)
+            {
+                this.logger.LogError("No ICommandHandler<{CommandType}> is registered for command {CommandType}", commandType, commandType);
+            }
+
+            foreach (var queryType in queryTypesWithoutHandlers)
+            {
+                this.logger.LogError("No IQueryHandler<{QueryType}, TQueryResult> is registered for query {QueryType}", queryType, queryType);
+            }
+
+            if (this.innovationOptions.FailFastOnMissingHandlers)
+            {
+                throw new MissingHandlersException(commandTypesWithoutHandlers: commandTypesWithoutHandlers, queryTypesWithoutHandlers: queryTypesWithoutHandlers);
+            }
         }
 
         private Dictionary<string, int> ProcessCommandBits(int commandBits)

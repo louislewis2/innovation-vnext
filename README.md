@@ -11,7 +11,37 @@ Innovation does not implement, and does not attempt to support, Event Sourcing.
 
 Innovation is **CQRS-first** and uses a **mediator-style dispatch pipeline** internally to route commands/queries to handlers and apply cross-cutting behaviors.
 
-> Innovation.vNext is the performance-focused evolution of [Innovation](https://github.com/louislewis2/innovation). See the [Performance](#performance) section below for measured gains.
+> Innovation.vNext is the performance-focused evolution of [Innovation](https://github.com/louislewis2/innovation). See [Performance](#performance) for measured gains.
+
+> Wondering how Innovation compares to other in-process mediator libraries? See **[BENCHMARKS.md](https://github.com/louislewis2/innovation-vnext/blob/master/BENCHMARKS.md#comparison-with-mediatr-and-mediator)** for a reproducible, side-by-side comparison against MediatR and Mediator.
+
+> [!WARNING]
+> **Innovation.vNext is alpha software.** This is a work in progress. The API surface may still
+> change, and the packages currently target **.NET 10 only**. Please weigh that before adopting it.
+
+---
+
+## Table of Contents
+
+- [Quick Start](#quick-start)
+- [Why Innovation](#why-innovation)
+- [Performance](#performance)
+- [Roadmap](#roadmap)
+- [External Dependencies](#external-dependencies)
+- [CQRS vs Mediator (Important Terminology)](#cqrs-vs-mediator-important-terminology)
+- [Clean Architecture Alignment](#clean-architecture-alignment)
+- [Dispatcher Command Pipeline](#dispatcher-command-pipeline)
+- [Framework Components](#framework-components)
+- [Query Pipeline](#query-pipeline)
+- [Supported .NET Frameworks](#supported-net-frameworks)
+- [Samples](#samples)
+- [Tests](#tests)
+- [Building](#building)
+- [Benchmarks](#benchmarks)
+- [Versioning](#versioning)
+- [Contributing](#contributing)
+- [Related Projects](#related-projects)
+- [License](#license)
 
 ---
 
@@ -71,10 +101,11 @@ var result = await dispatcher.Command(new CreateCustomerCommand("Louis", "Lewis"
 
 - **Performance-first**: vNext delivers order-of-magnitude gains over the original Innovation - see [Performance](#performance).
 - **CQRS-first design** for explicit write/read separation.
-- **Free forever** (no intent to charge).
 - **Simple request/handler model** with low ceremony.
 - **Clean architecture alignment** for maintainable boundaries.
 - **Extensible pipeline** for validation, logging, transactions, and other cross-cutting concerns.
+- **Built-in auditing** through a pluggable `IAuditStore`.
+- **MIT licensed**, free and open source.
 
 ---
 
@@ -84,11 +115,21 @@ Innovation.vNext is a ground-up performance pass over the original [Innovation](
 
 | Scenario | Legacy Innovation | Innovation.vNext | Improvement |
 |---|---:|---:|---:|
-| Validate `BlankCommand` (DataAnnotations) | 460.1 ns / 1.07 KB | 40.17 ns / 24 B | **~11.5x faster, ~45x less memory** |
-| Validate `InsertCustomer` (DataAnnotations) | 2.478 us / 3.36 KB | 737.2 ns / 1.17 KB | **~3.4x faster, ~2.9x less memory** |
-| Dispatch `BlankCommand` (end-to-end, no audit store registered) | 2.032 us / 2.5 KB | 91.81 ns / 24 B | **~22.1x faster, ~104x less memory** |
+| Validate `BlankCommand` (DataAnnotations) | 460.1 ns / 1.07 KB | 46.53 ns / 24 B | **~9.9x faster, ~46x less memory** |
+| Validate `InsertCustomer` (DataAnnotations) | 2.478 us / 3.36 KB | 775.5 ns / 1.3 KB | **~3.2x faster, ~2.6x less memory** |
+| Dispatch `BlankCommand` (end-to-end, no audit store registered) | 2.032 us / 2.5 KB | 63.15 ns / 24 B | **~32.2x faster, ~107x less memory** |
 
-> Benchmarks are directional: results depend on hardware, runtime, workload shape, and which pipeline behaviors (validation, reactors, interceptors, audit store) are enabled. The Dispatch `BlankCommand` row above is measured with **no IAuditStore registered** - it represents the framework's zero-registration floor. Registering an audit store (a common, realistic setup) adds real, measurable cost - see [Benchmark Results](#benchmark-results) for that comparison. Full methodology and raw results are in [Benchmark Results](#benchmark-results).
+Registering an audit store (a common, realistic setup) adds real, measurable cost - see [BENCHMARKS.md](https://github.com/louislewis2/innovation-vnext/blob/master/BENCHMARKS.md#audit-store) for that comparison, and for full methodology and raw results.
+
+> Note on the two `DataAnnotations` rows: those benchmarks construct `DataAnnotationsValidator`/MiniValidation directly and never enter the dispatcher, so they measure validation cost in isolation rather than dispatch cost.
+
+### How Innovation compares to other libraries
+
+The table above measures Innovation.vNext against its own predecessor. If you want to see how it compares to other in-process mediator libraries, there is a separate, self-contained report:
+
+**[Comparison with MediatR and Mediator](https://github.com/louislewis2/innovation-vnext/blob/master/BENCHMARKS.md#comparison-with-mediatr-and-mediator)** - Innovation vNext measured against [MediatR](https://github.com/LuckyPennySoftware/MediatR) and [Mediator](https://github.com/martinothamar/Mediator).
+
+It covers command, query, message and pipeline-loaded dispatch, the handler-lifetime tradeoff that shapes the results, what the benchmarks deliberately do not equalize, and full methodology so you can reproduce every number yourself.
 
 ---
 
@@ -106,18 +147,13 @@ Innovation.vNext is a ground-up performance pass over the original [Innovation](
 - Made Reactor pipeline pluggable
 - Expanded benchmark coverage to the full dispatch pipeline (Command/Query/Message/MessageFor, reactors, interceptors, validators, audit store, validation aggregation) - all IO-free
 - Fixed the default benchmark provider to not implicitly register an audit store, so "Blank"/baseline benchmarks measure the framework's true zero-registration floor rather than silently including audit-store overhead; audit-store cost is now tracked explicitly (see Audit Store Comparison Tests)
+- Dispatch-path optimization pass, with no API or behavior change: the dispatcher's built-in logging is guarded by a single `ILogger.IsEnabled` check per dispatch rather than one per call site, `GetServices` resolutions no longer make a redundant array copy, the memoized audit-store fast path extends from `Command` to `Query`/`Message`/`QueryFor`/`MessageFor`, the command-bits lookup is frozen after configuration, and `CorrelationId` is generated lazily
 
 ### Planned
 
 - Document breaking changes and how to move from Innovation to Innovation.vNext
 - Create wiki
 - Code review
-- Profile and improve performance of the dispatcher pipeline for both commands and queries
-
-## Alpha Warning
-
-Please note, at this point this is a work in progress, therefore it is considered alpha grade software.
-This code base and the api surface may still change.
 
 ## External Dependencies
 
@@ -256,21 +292,54 @@ The Innovation loader can load assemblies from specified locations to support mo
 
 ## Supported .NET Frameworks
 
-1. .NET Standard 2.0
-2. .NET 10.0
+Innovation.vNext targets **.NET 10 only**. All three packages are built for `net10.0`:
+
+| Package | Target framework |
+|---|---|
+| `Innovation.Api.vNext` | .NET 10 |
+| `Innovation.ServiceBus.InProcess.vNext` | .NET 10 |
+| `Innovation.Integration.AspNetCore.vNext` | .NET 10 |
+
+There is currently no .NET Standard or down-level .NET target. If you are on an earlier runtime,
+Innovation.vNext will not restore.
 
 ---
 
 ## Samples
 
-- `Innovation.Sample.Console`
-- `Innovation.Sample.Web`
+The [`samples/`](https://github.com/louislewis2/innovation-vnext/tree/master/samples) folder
+contains a layered sample application laid out along Clean Architecture boundaries:
+
+| Project | Role |
+|---|---|
+| `Innovation.Sample.Api` | Commands, queries, criteria and view models - the application contract |
+| `Innovation.Sample.BaseModule` | Command and query handlers, reactors and result reactors |
+| `Innovation.Sample.Data` | EF Core contexts, persistence models and an `IAuditStore` implementation |
+| `Innovation.Sample.Infrastructure` | Configuration and settings |
+| `Innovation.Sample.Web` | ASP.NET Core controllers that dispatch commands and queries |
+| `Innovation.Sample.Console` | Minimal console host |
+
+For a realistic end-to-end setup, start with
+[`Innovation.Sample.Web`](https://github.com/louislewis2/innovation-vnext/tree/master/samples/Innovation.Sample.Web)
+and follow a command through `Innovation.Sample.BaseModule` into `Innovation.Sample.Data`.
 
 ---
 
 ## Tests
 
-One primary test project plus two additional test-directory projects used to validate loading behavior.
+| Project | Role |
+|---|---|
+| `Innovation.ServiceBus.InProcess.Tests` | Primary test suite (MSTest, 31 tests) |
+| `Innovation.ApiSample` | Shared command, query and message definitions used by tests and benchmarks |
+| `Innovation.SampleApi.Consumer` | Handlers, validators, interceptors, reactors and a sample audit store |
+| `Innovation.Benchmarks` | Innovation's own BenchmarkDotNet suite |
+| `Innovation.Benchmarks.Comparison` | Comparison benchmarks against MediatR and Mediator |
+| `Innovation.Benchmarks.Comparison.MediatorScoped` | Mediator `Scoped`-lifetime benchmarks, in a separate assembly because the lifetime is a compile-time setting |
+| `Innovation.CaptiveDependency.Demo` | Standalone console app demonstrating the DI scope rules discussed in [BENCHMARKS.md](https://github.com/louislewis2/innovation-vnext/blob/master/BENCHMARKS.md#handler-lifetime-and-what-it-costs) |
+
+```bash
+dotnet test
+```
 
 ---
 
@@ -284,89 +353,67 @@ One primary test project plus two additional test-directory projects used to val
 
 ---
 
-## Benchmark Results
+## Benchmarks
 
-### Unit reference
-- 1 second = 1,000 ms
-- 1 second = 1,000,000 us
-- 1 second = 1,000,000,000 ns
+Full benchmark results are published in
+[BENCHMARKS.md](https://github.com/louislewis2/innovation-vnext/blob/master/BENCHMARKS.md),
+covering both Innovation's own pipeline benchmarks (dispatch, audit store, reactors, interceptors,
+validators, validation aggregation) and the side-by-side comparison against MediatR and Mediator.
 
-### DataAnnotationsValidator with `BlankCommand`
-| Method          | Mean     | Error    | StdDev   | Gen0   | Allocated |
-|---------------- |---------:|---------:|---------:|-------:|----------:|
-| BlankCommandNew | 40.17 ns | 0.081 ns | 0.076 ns | 0.0023 |      24 B |
+---
 
-Operations per second: `1 000 000 000 / 40.17 = 24 894 199`
+## Versioning
 
-### DataAnnotationsValidator with `InsertCustomer`
-| Method                | Mean     | Error   | StdDev  | Gen0   | Allocated |
-|---------------------- |---------:|--------:|--------:|-------:|----------:|
-| InsertCustomerCommand | 737.2 ns | 1.51 ns | 1.41 ns | 0.1144 |   1.17 KB |
+Innovation.vNext follows [semantic versioning](https://semver.org/):
 
-Operations per second: `1 000 000 000 / 737.2 = 1 356 505`
+- **Major** for breaking changes
+- **Minor** for backward-compatible new features
+- **Patch** for bug fixes
 
-### Dispatcher with `BlankCommand` (no audit store registered)
-| Method               | Mean     | Error   | StdDev  | Gen0   | Allocated |
-|--------------------- |---------:|--------:|--------:|-------:|----------:|
-| DispatchBlankCommand | 91.81 ns | 0.832 ns | 0.778 ns | 0.0023 |      24 B |
+While the packages are pre-1.0 and marked alpha, breaking changes may land in minor versions. Once
+1.0 ships, breaking changes will be reserved for major versions. Release notes are published on the
+[releases page](https://github.com/louislewis2/innovation-vnext/releases).
 
-Operations per second: `1 000 000 000 / 91.81 = 10 892 275`
+---
 
-> Note: this benchmark - and every "Blank"/baseline benchmark below - uses no `IAuditStore` registration, since `DependencyBuilderBase`'s default constructor intentionally leaves the pipeline at its zero-registration floor. Earlier revisions of this README quoted ~171 ns / 56 B for this scenario; that number actually included an audit store registration and is now reported separately under **Audit Store Comparison Tests** below.
+## Contributing
 
-## All Benchmark Results
+Contributions are welcome - issues, discussions and pull requests alike. See
+[CONTRIBUTING.md](https://github.com/louislewis2/innovation-vnext/blob/master/CONTRIBUTING.md) for
+how to build, test and benchmark the project locally.
 
-### Audit Store Comparison Tests
-| Method                  | Mean      | Error    | StdDev   | Ratio        | RatioSD | Gen0   | Allocated | Alloc Ratio |
-|------------------------ |----------:|---------:|---------:|-------------:|--------:|-------:|----------:|------------:|
-| AuditStoreNotRegistered |  96.46 ns | 0.689 ns | 0.644 ns |     baseline |         | 0.0023 |      24 B |             |
-| AuditStoreRegistered    | 166.73 ns | 0.564 ns | 0.440 ns | 1.73x slower |   0.01x | 0.0052 |      56 B | 2.33x more  |
+If you find an error in the benchmarks, or in anything this repository states about another
+library, please open an issue. Corrections are genuinely appreciated.
 
-Registering an `IAuditStore` (a common, realistic setup - most consumers will want auditing) adds ~75 ns and an extra allocation per dispatch: an `AuditContext`, plus `SampleAuditStore`'s per-correlation-id `Dictionary`/`List<IEvent>` bookkeeping.
+---
 
-### BlankCommand DataAnnotations Validator Tests
-| Method          | Mean     | Error    | StdDev   | Gen0   | Allocated |
-|---------------- |---------:|---------:|---------:|-------:|----------:|
-| BlankCommandNew | 40.17 ns | 0.081 ns | 0.076 ns | 0.0023 |      24 B |
+## Related Projects
 
-### DataAnnotations Validator Tests
-| Method                | Mean     | Error   | StdDev  | Gen0   | Allocated |
-|---------------------- |---------:|--------:|--------:|-------:|----------:|
-| InsertCustomerCommand | 737.2 ns | 1.51 ns | 1.41 ns | 0.1144 |   1.17 KB |
+There are several good in-process messaging and mediator libraries for .NET. Depending on what you
+need, one of these may suit your application better than Innovation:
 
-### Dispatcher Command Tests
-| Method               | Mean     | Error   | StdDev  | Gen0   | Allocated |
-|--------------------- |---------:|--------:|--------:|-------:|----------:|
-| DispatchBlankCommand | 91.81 ns | 0.832 ns | 0.778 ns | 0.0023 |      24 B |
+- [MediatR](https://github.com/LuckyPennySoftware/MediatR) - the original and most widely used .NET
+  mediator implementation. Reflection-based, in-memory only. Much of the vocabulary the rest of us
+  use comes from here.
+- [Mediator](https://github.com/martinothamar/Mediator) by martinothamar - source-generator based,
+  with a MediatR-like API, full Native AOT support and built-in OpenTelemetry metrics and tracing.
+- [Foundatio.Mediator](https://github.com/FoundatioFx/Foundatio.Mediator) - a conventions-based API,
+  also source-generator based, in-memory only.
+- [Wolverine](https://wolverinefx.net/) - conventions-based, and a larger framework that also covers
+  asynchronous and distributed messaging.
+- [MassTransit](https://masstransit.io/) - distributed messaging, which also offers an in-memory
+  mediator implementation.
+- Innovation.vNext (this library) - CQRS-first rather than mediator-first, with interceptors,
+  validators, reactors and an audit store hook built into the dispatch pipeline rather than composed
+  from pipeline behaviors. Resolves from the DI container per dispatch. .NET 10 only.
 
-### Dispatcher Message Tests
-| Method             | Mean     | Error   | StdDev  | Ratio        | RatioSD | Gen0   | Allocated | Alloc Ratio |
-|------------------- |---------:|--------:|--------:|-------------:|--------:|-------:|----------:|------------:|
-| DispatchMessage    |  90.90 ns | 0.522 ns | 0.463 ns |     baseline |         | 0.0083 |      88 B |             |
-| DispatchMessageFor | 316.23 ns | 0.841 ns | 0.786 ns | 3.48x slower |   0.02x | 0.0701 |     736 B | 8.36x more  |
+If you are weighing Innovation against MediatR or Mediator specifically,
+[BENCHMARKS.md](https://github.com/louislewis2/innovation-vnext/blob/master/BENCHMARKS.md#comparison-with-mediatr-and-mediator)
+measures all three in the same harness, and documents what those measurements do and do not cover.
 
-### Dispatcher Pipeline Comparison Tests
-| Method                            | Mean        | Error    | StdDev   | Ratio         | RatioSD | Gen0   | Gen1   | Allocated | Alloc Ratio |
-|---------------------------------- |------------:|---------:|---------:|--------------:|--------:|-------:|-------:|----------:|------------:|
-| Blank                             |    88.06 ns | 0.330 ns | 0.308 ns |      baseline |         | 0.0023 |      - |      24 B |             |
-| ReactorAndResultReactor           |   375.18 ns | 2.188 ns | 1.827 ns |  4.26x slower |   0.02x | 0.0405 | 0.0200 |     423 B | 17.62x more |
-| Interceptor                       |   150.11 ns | 0.599 ns | 0.561 ns |  1.70x slower |   0.01x | 0.0105 |      - |     112 B |  4.67x more |
-| DataAnnotationsAndCustomValidator | 1,474.23 ns | 6.032 ns | 5.642 ns | 16.74x slower |   0.08x | 0.1965 |      - |    2064 B | 86.00x more |
+---
 
-### Dispatcher Query Tests
-| Method             | Mean     | Error   | StdDev  | Gen0   | Allocated |
-|------------------- |---------:|--------:|--------:|-------:|----------:|
-| DispatchBlankQuery | 82.23 ns | 0.478 ns | 0.447 ns | 0.0023 |      24 B |
+## License
 
-### Validation Aggregation Comparison Tests
-| Method    | Mean     | Error     | StdDev    | Ratio        | RatioSD | Gen0   | Allocated | Alloc Ratio |
-|---------- |---------:|----------:|----------:|-------------:|--------:|-------:|----------:|------------:|
-| FailFast  | 2.044 us | 0.0086 us | 0.0077 us |     baseline |         | 0.3777 |   3.88 KB |             |
-| Aggregate | 2.157 us | 0.0140 us | 0.0131 us | 1.06x slower |   0.01x | 0.3700 |   3.81 KB | 1.02x less  |
-
-`InsertVendorCommand` fails both DataAnnotations and the custom `InsertVendorAddressValidator` in this benchmark, so `Aggregate` genuinely has two error sets to merge; the ~113 ns difference is the cost of that merge (`AggregateValidationErrors = true`) versus failing fast on the first validator that reports an error (default).
-
-### ValueStopwatch Tests
-| Method         | Mean     | Error    | StdDev   | Allocated |
-|--------------- |---------:|---------:|---------:|----------:|
-| StopWatchUsage | 30.66 ns | 0.012 ns | 0.011 ns |         - |
+Innovation.vNext is licensed under the
+[MIT License](https://github.com/louislewis2/innovation-vnext/blob/master/LICENSE).
