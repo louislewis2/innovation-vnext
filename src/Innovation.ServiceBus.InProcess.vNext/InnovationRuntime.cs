@@ -112,6 +112,7 @@
             this.RegisterHandlers();
             this.LogCommandBits();
             this.ValidateHandlersRegistered();
+            this.WarnOnCorrelationAwareCommands();
 
             this.frozenCommandLookup = this.commandLookup.ToFrozenDictionary();
         }
@@ -265,7 +266,9 @@
                                 HandleCommandBits(commandType: genericArguments[0], commandBitTypes: CommandBitTypes.ContextAware);
                             }
 
-                            var isCorrelationIdAware = genericArguments[0].GetInterfaces().Any(i => i.IsAssignableFrom(typeof(ICorrelationAware)));
+                            // Deliberately tested against the handler type, not the command type: the dispatcher
+                            // sets the correlation id on the handler it resolves, never on the caller's command.
+                            var isCorrelationIdAware = typeof(ICorrelationAware).IsAssignableFrom(type.AsType());
 
                             if (isCorrelationIdAware)
                             {
@@ -565,6 +568,26 @@
             if (this.innovationOptions.FailFastOnMissingHandlers)
             {
                 throw new MissingHandlersException(commandTypesWithoutHandlers: commandTypesWithoutHandlers, queryTypesWithoutHandlers: queryTypesWithoutHandlers);
+            }
+        }
+
+        // Commands used to be stamped with the correlation id directly; that now happens on the command
+        // handler (and on reactors), matching what the query pipeline has always done. A command still
+        // implementing ICorrelationAware would otherwise silently stop being populated, so it is reported
+        // once here at startup rather than surfacing as a null correlation id somewhere in the consumer's
+        // logging. Warning rather than error: implementing the interface is not itself invalid, and a
+        // consumer may well be setting the property themselves.
+        private void WarnOnCorrelationAwareCommands()
+        {
+            foreach (var commandType in this.discoveredCommandTypes)
+            {
+                if (typeof(ICorrelationAware).IsAssignableFrom(commandType))
+                {
+                    this.logger.LogWarning(
+                        "{CommandType} implements ICorrelationAware. The dispatcher sets the correlation id on the command handler and on reactors, not on the command itself, so this property will not be populated by Innovation. Move ICorrelationAware onto the ICommandHandler<{CommandType}> implementation, or onto the reactor that needs it.",
+                        commandType,
+                        commandType);
+                }
             }
         }
 

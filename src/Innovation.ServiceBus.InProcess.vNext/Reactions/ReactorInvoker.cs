@@ -9,6 +9,7 @@
     using System.Collections.Concurrent;
     using Microsoft.Extensions.DependencyInjection;
 
+    using Api.vNext.Core;
     using Api.vNext.Reactions;
 
     /// <summary>
@@ -68,6 +69,15 @@
 
                 try
                 {
+                    // Reactors run in the background, long after the dispatch that queued them returned, so
+                    // they have no other route to the originating correlation id - the React contracts only
+                    // receive the command (and result). Setting it here keeps correlation on the component
+                    // rather than requiring it to be smuggled through the command itself.
+                    if (reactor is ICorrelationAware correlationAwareReactor)
+                    {
+                        correlationAwareReactor.CorrelationId = item.CorrelationId;
+                    }
+
                     if (reactMethod.Invoke(obj: reactor, parameters: arguments) is Task reactTask)
                     {
                         await reactTask;

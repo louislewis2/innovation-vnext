@@ -227,10 +227,12 @@
 
                 if (hasCrossCuttingFeatures)
                 {
-                    if ((commandBitsForCommandType & (1 << (int)CommandBitTypes.CorrelationIdAware)) != 0)
+                    // Set on the handler rather than on the command, which is what the Query pipeline has
+                    // always done.
+                    if ((commandBitsForCommandType & (1 << (int)CommandBitTypes.CorrelationIdAware)) != 0
+                        && commandHandler is ICorrelationAware correlationAwareCommandHandler)
                     {
-                        var correlationAwareCommand = command as ICorrelationAware;
-                        correlationAwareCommand.CorrelationId = this.CorrelationId;
+                        correlationAwareCommandHandler.CorrelationId = this.CorrelationId;
                     }
 
                     // If the command has reactors registered, queue them to run safely in the background -

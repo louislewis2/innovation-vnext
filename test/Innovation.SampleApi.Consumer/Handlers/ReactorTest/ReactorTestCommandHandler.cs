@@ -2,12 +2,17 @@
 {
     using System.Threading.Tasks;
 
+    using Innovation.Api.vNext.Core;
     using Innovation.Api.vNext.Commanding;
     using Innovation.Api.vNext.CommandHelpers;
 
     using Innovation.ApiSample;
 
-    public class ReactorTestCommandHandler : ICommandHandler<ReactorTestCommand>
+    /// <summary>
+    /// Implements ICorrelationAware on the handler - the dispatcher sets the correlation id here, not on
+    /// the command, so this also serves as the regression test for that behavior.
+    /// </summary>
+    public class ReactorTestCommandHandler : ICommandHandler<ReactorTestCommand>, ICorrelationAware
     {
         #region Fields
 
@@ -25,11 +30,17 @@
 
         #endregion Constructor
 
+        #region Properties
+
+        public string CorrelationId { private get; set; }
+
+        #endregion Properties
+
         #region Methods
 
         public ValueTask<ICommandResult> Handle(ReactorTestCommand command)
         {
-            ReactorTestSignal.RecordDispatchScopeId(correlationId: command.CorrelationId, scopeId: this.scopeMarker.Id);
+            ReactorTestSignal.RecordDispatchScopeId(correlationId: this.CorrelationId, scopeId: this.scopeMarker.Id);
 
             return ValueTask.FromResult(commandResult);
         }

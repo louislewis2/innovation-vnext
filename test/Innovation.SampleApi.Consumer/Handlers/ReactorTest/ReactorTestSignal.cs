@@ -21,6 +21,13 @@
             dispatchScopeIds[correlationId] = scopeId;
         }
 
+        // The command handler only gets to record under the correct key if the dispatcher handed it the
+        // correlation id, so this doubles as the assertion that handler-level ICorrelationAware works.
+        public static bool WasDispatchScopeRecordedFor(string correlationId)
+        {
+            return dispatchScopeIds.ContainsKey(correlationId);
+        }
+
         public static Task<bool> WaitForCommandReactor(string correlationId)
         {
             return commandReactorSignals.GetOrAdd(correlationId, _ => new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously)).Task;

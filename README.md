@@ -148,6 +148,7 @@ It covers command, query, message and pipeline-loaded dispatch, the handler-life
 - Expanded benchmark coverage to the full dispatch pipeline (Command/Query/Message/MessageFor, reactors, interceptors, validators, audit store, validation aggregation) - all IO-free
 - Fixed the default benchmark provider to not implicitly register an audit store, so "Blank"/baseline benchmarks measure the framework's true zero-registration floor rather than silently including audit-store overhead; audit-store cost is now tracked explicitly (see Audit Store Comparison Tests)
 - Dispatch-path optimization pass, with no API or behavior change: the dispatcher's built-in logging is guarded by a single `ILogger.IsEnabled` check per dispatch rather than one per call site, `GetServices` resolutions no longer make a redundant array copy, the memoized audit-store fast path extends from `Command` to `Query`/`Message`/`QueryFor`/`MessageFor`, the command-bits lookup is frozen after configuration, and `CorrelationId` is generated lazily
+- `ICorrelationAware` is now consistent across the pipeline: the correlation ID is set on command handlers, query handlers and reactors, never on the command or query itself. Commands that implement `ICorrelationAware` are reported at startup with guidance on where to move the interface
 
 ### Planned
 
@@ -281,8 +282,8 @@ Messages can broadcast to multiple handlers.
 Dispatcher can create or consume an incoming correlation ID.
 
 - ASP.NET Core implementation available using `X-Correlation-ID`.
-- Handlers can implement `ICorrelationAware`.
-- Dispatcher sets `CorrelationId` before `Handle` is called.
+- Command handlers, query handlers and reactors can implement `ICorrelationAware`.
+- Dispatcher sets `CorrelationId` before `Handle` is called, and before `React` is called.
 
 ### SearchLocations
 

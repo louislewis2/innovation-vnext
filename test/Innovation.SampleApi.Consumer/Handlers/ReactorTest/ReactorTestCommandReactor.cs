@@ -2,11 +2,12 @@
 {
     using System.Threading.Tasks;
 
+    using Innovation.Api.vNext.Core;
     using Innovation.Api.vNext.Reactions;
 
     using Innovation.ApiSample;
 
-    public class ReactorTestCommandReactor : ICommandReactor<ReactorTestCommand>
+    public class ReactorTestCommandReactor : ICommandReactor<ReactorTestCommand>, ICorrelationAware
     {
         #region Fields
 
@@ -23,11 +24,17 @@
 
         #endregion Constructor
 
+        #region Properties
+
+        public string CorrelationId { private get; set; }
+
+        #endregion Properties
+
         #region Methods
 
         public Task React(ReactorTestCommand command)
         {
-            ReactorTestSignal.SignalCommandReactor(correlationId: command.CorrelationId, reactorScopeId: this.scopeMarker.Id);
+            ReactorTestSignal.SignalCommandReactor(correlationId: this.CorrelationId, reactorScopeId: this.scopeMarker.Id);
 
             return Task.CompletedTask;
         }

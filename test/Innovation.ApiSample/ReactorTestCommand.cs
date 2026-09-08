@@ -1,6 +1,5 @@
 ﻿namespace Innovation.ApiSample
 {
-    using Innovation.Api.vNext.Core;
     using Innovation.Api.vNext.Commanding;
 
     /// <summary>
@@ -8,10 +7,8 @@
     /// in isolation from the other sample commands, so reactor-pipeline tests don't interfere with (or
     /// depend on) unrelated test fixtures.
     /// </summary>
-    public class ReactorTestCommand : ICommand, ICorrelationAware
+    public class ReactorTestCommand : ICommand
     {
         public string EventName => nameof(ReactorTestCommand);
-
-        public string CorrelationId { get; set; }
     }
 }

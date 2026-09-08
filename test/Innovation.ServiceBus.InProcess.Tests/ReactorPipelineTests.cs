@@ -36,6 +36,24 @@
         }
 
         [TestMethod]
+        public async Task Command_Handler_Receives_The_Correlation_Id()
+        {
+            // Arrange
+            var command = new ReactorTestCommand();
+            var dispatcher = this.GetDispatcher();
+            var correlationId = Guid.NewGuid().ToString();
+            dispatcher.SetCorrelationId(correlationId: correlationId);
+
+            // Act
+            var result = await dispatcher.Command(command: command, suppressExceptions: false);
+
+            // Assert - the handler implements ICorrelationAware and records under whatever correlation id it
+            // was given, so finding the key proves the dispatcher stamped the handler rather than the command.
+            Assert.IsTrue(condition: result.Success);
+            Assert.IsTrue(condition: ReactorTestSignal.WasDispatchScopeRecordedFor(correlationId: correlationId), message: "The command handler did not receive the dispatcher's correlation id.");
+        }
+
+        [TestMethod]
         public async Task Command_Reactor_Eventually_Runs_In_A_Fresh_Scope()
         {
             // Arrange
