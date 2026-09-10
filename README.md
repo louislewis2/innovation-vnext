@@ -16,8 +16,9 @@ Innovation is **CQRS-first** and uses a **mediator-style dispatch pipeline** int
 > Wondering how Innovation compares to other in-process mediator libraries? See **[BENCHMARKS.md](https://github.com/louislewis2/innovation-vnext/blob/master/BENCHMARKS.md#comparison-with-mediatr-and-mediator)** for a reproducible, side-by-side comparison against MediatR and Mediator.
 
 > [!WARNING]
-> **Innovation.vNext is alpha software.** This is a work in progress. The API surface may still
-> change, and the packages currently target **.NET 10 only**. Please weigh that before adopting it.
+> **Innovation.vNext is beta software.** The last planned breaking change to the API surface
+> shipped in 1.0.0-beta1, so the public API is expected to stabilize from here toward 1.0.0. The
+> packages currently target **.NET 10 only**. Please weigh that before adopting it.
 
 ---
 
