@@ -1,6 +1,7 @@
 ﻿namespace Innovation.Sample.BaseModule.Handlers.Customers.Commands
 {
     using System;
+    using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.Extensions.Logging;
     using Microsoft.EntityFrameworkCore;
@@ -32,23 +33,23 @@
 
         #region Methods
 
-        public async ValueTask<ICommandResult> Handle(UpdateCustomerCommand command)
+        public async ValueTask<ICommandResult> Handle(UpdateCustomerCommand command, CancellationToken cancellationToken)
         {
-            return await Persist(command: command);
+            return await Persist(command: command, cancellationToken: cancellationToken);
         }
 
         #endregion Methods
 
         #region Private Methods
 
-        private async Task<ICommandResult> Persist(UpdateCustomerCommand command)
+        private async Task<ICommandResult> Persist(UpdateCustomerCommand command, CancellationToken cancellationToken)
         {
             var commandResult = new CommandResult();
 
             try
             {
                 var customer = await primaryContext.Customers
-                    .FirstOrDefaultAsync(x => x.Id == command.CustomerId);
+                    .FirstOrDefaultAsync(x => x.Id == command.CustomerId, cancellationToken);
 
                 if (customer == null)
                 {
@@ -62,7 +63,7 @@
                 customer.Email = command.Criteria.Email;
                 customer.PhoneNumber = command.Criteria.PhoneNumber;
 
-                await primaryContext.SaveChangesAsync();
+                await primaryContext.SaveChangesAsync(cancellationToken);
 
                 commandResult.SetRecord(recordId: customer.Id);
 

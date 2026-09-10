@@ -1,5 +1,6 @@
 ﻿namespace Innovation.SampleApi.Consumer.Handlers
 {
+    using System.Threading;
     using System.Threading.Tasks;
 
     using Innovation.Api.vNext.Commanding;
@@ -17,7 +18,7 @@
 
         #region Methods
 
-        public ValueTask<ICommandResult> Handle(BlankCommand command)
+        public ValueTask<ICommandResult> Handle(BlankCommand command, CancellationToken cancellationToken)
         {
             return ValueTask.FromResult(commandResult);
         }

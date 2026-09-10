@@ -1,6 +1,7 @@
 ﻿namespace Innovation.SampleApi.Consumer.Handlers.Vendors.Commands
 {
     using System;
+    using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.Extensions.Logging;
 
@@ -20,7 +21,7 @@
 
         #region Methods
 
-        public override Task<ICommandResult> Persist()
+        public override Task<ICommandResult> Persist(CancellationToken cancellationToken)
         {
             return Task.FromResult(result: this.ReturnSuccess(recordId: Guid.NewGuid()));
         }

@@ -1,5 +1,6 @@
 ﻿namespace Innovation.ServiceBus.InProcess.Tests
 {
+    using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -39,7 +40,7 @@
 
             // Act
             var dispatcher = this.GetDispatcher();
-            var commandResult = (await dispatcher.Command(command: insertVendorCommand)).As<AggregateValidationResult>();
+            var commandResult = (await dispatcher.Command(command: insertVendorCommand, cancellationToken: CancellationToken.None)).As<AggregateValidationResult>();
 
             // Assert
             Assert.IsFalse(condition: commandResult.Success);
@@ -61,7 +62,7 @@
 
             // Act
             var dispatcher = this.GetDispatcher();
-            var commandResult = (await dispatcher.Command(command: insertVendorCommand)).As<AggregateValidationResult>();
+            var commandResult = (await dispatcher.Command(command: insertVendorCommand, cancellationToken: CancellationToken.None)).As<AggregateValidationResult>();
 
             // Assert
             Assert.IsFalse(condition: commandResult.Success);
@@ -81,7 +82,7 @@
 
             // Act
             var dispatcher = this.GetDispatcher();
-            var commandResult = await dispatcher.Command(command: insertVendorCommand);
+            var commandResult = await dispatcher.Command(command: insertVendorCommand, cancellationToken: CancellationToken.None);
 
             // Assert
             Assert.IsTrue(condition: commandResult.Success);

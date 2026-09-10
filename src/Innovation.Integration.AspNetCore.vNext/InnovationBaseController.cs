@@ -1,6 +1,7 @@
 ﻿namespace Innovation.Integration.AspNetCore.vNext
 {
     using System;
+    using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.AspNetCore.Mvc;
     using Microsoft.AspNetCore.Http;
@@ -40,44 +41,44 @@
 
         #region Methods
 
-        protected async Task<TQueryResult> Query<TQuery, TQueryResult>([DisallowNull] TQuery query)
+        protected async Task<TQueryResult> Query<TQuery, TQueryResult>([DisallowNull] TQuery query, CancellationToken cancellationToken)
             where TQuery : IQuery
             where TQueryResult : IQueryResult
         {
-            return await this.Dispatcher.Query<TQuery, TQueryResult>(query);
+            return await this.Dispatcher.Query<TQuery, TQueryResult>(query, cancellationToken);
         }
 
-        protected async Task<ObjectResult> Query<TQuery, TQueryResult>([DisallowNull] TQuery query, string identifer)
+        protected async Task<ObjectResult> Query<TQuery, TQueryResult>([DisallowNull] TQuery query, string identifer, CancellationToken cancellationToken)
             where TQuery : IQuery
             where TQueryResult : IQueryResult
         {
-            return await this.QueryHandleResourceNotFound<TQuery, string, TQueryResult>(query, identifer);
+            return await this.QueryHandleResourceNotFound<TQuery, string, TQueryResult>(query, identifer, cancellationToken);
         }
 
-        protected async Task<ObjectResult> Query<TQuery, TQueryResult>([DisallowNull] TQuery query, Guid identifer)
+        protected async Task<ObjectResult> Query<TQuery, TQueryResult>([DisallowNull] TQuery query, Guid identifer, CancellationToken cancellationToken)
             where TQuery : IQuery
             where TQueryResult : IQueryResult
         {
-            return await this.QueryHandleResourceNotFound<TQuery, Guid, TQueryResult>(query, identifer);
+            return await this.QueryHandleResourceNotFound<TQuery, Guid, TQueryResult>(query, identifer, cancellationToken);
         }
 
-        protected async Task<ObjectResult> Query<TQuery, TQueryResult>([DisallowNull] TQuery query, int identifer)
+        protected async Task<ObjectResult> Query<TQuery, TQueryResult>([DisallowNull] TQuery query, int identifer, CancellationToken cancellationToken)
             where TQuery : IQuery
             where TQueryResult : IQueryResult
         {
-            return await this.QueryHandleResourceNotFound<TQuery, int, TQueryResult>(query, identifer);
+            return await this.QueryHandleResourceNotFound<TQuery, int, TQueryResult>(query, identifer, cancellationToken);
         }
 
-        protected async Task<ObjectResult> Query<TQuery, TQueryResult>([DisallowNull] TQuery query, long identifer)
+        protected async Task<ObjectResult> Query<TQuery, TQueryResult>([DisallowNull] TQuery query, long identifer, CancellationToken cancellationToken)
             where TQuery : IQuery
             where TQueryResult : IQueryResult
         {
-            return await this.QueryHandleResourceNotFound<TQuery, long, TQueryResult>(query, identifer);
+            return await this.QueryHandleResourceNotFound<TQuery, long, TQueryResult>(query, identifer, cancellationToken);
         }
 
-        protected async ValueTask<ObjectResult> Command<TCommand>([DisallowNull] TCommand command, bool suppressExceptions = true) where TCommand : ICommand
+        protected async ValueTask<ObjectResult> Command<TCommand>([DisallowNull] TCommand command, CancellationToken cancellationToken, bool suppressExceptions = true) where TCommand : ICommand
         {
-            var commandResult = await this.Dispatcher.Command(command: command, suppressExceptions: suppressExceptions);
+            var commandResult = await this.Dispatcher.Command(command: command, cancellationToken: cancellationToken, suppressExceptions: suppressExceptions);
 
             if (commandResult.Success)
             {
@@ -210,11 +211,11 @@
             return this.HttpContext.RequestServices.GetRequiredService<IHostEnvironment>();
         }
 
-        private async Task<ObjectResult> QueryHandleResourceNotFound<TQuery, TResourceId, TQueryResult>([DisallowNull] TQuery query, TResourceId resourceId)
+        private async Task<ObjectResult> QueryHandleResourceNotFound<TQuery, TResourceId, TQueryResult>([DisallowNull] TQuery query, TResourceId resourceId, CancellationToken cancellationToken)
             where TQuery : IQuery
             where TQueryResult : IQueryResult
         {
-            var queryResult = await this.Dispatcher.Query<TQuery, TQueryResult>(query);
+            var queryResult = await this.Dispatcher.Query<TQuery, TQueryResult>(query, cancellationToken);
 
             if (queryResult == null)
             {

@@ -1,5 +1,6 @@
 ﻿namespace Innovation.ServiceBus.InProcess.Tests
 {
+    using System.Threading;
     using System.Threading.Tasks;
     using System.Collections.Generic;
     using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -24,7 +25,7 @@
 
             // Act
             var dispatcher = this.GetDispatcher();
-            var commandResult = (await dispatcher.Command(command: insertCustomerCommand)).As<CommandResult>();
+            var commandResult = (await dispatcher.Command(command: insertCustomerCommand, cancellationToken: CancellationToken.None)).As<CommandResult>();
 
             // Assert
             Assert.IsFalse(condition: commandResult.Success);
@@ -42,7 +43,7 @@
 
             // Act
             var dispatcher = this.GetDispatcher();
-            var commandResult = (await dispatcher.Command(command: insertCustomerCommand)).As<CommandResult>();
+            var commandResult = (await dispatcher.Command(command: insertCustomerCommand, cancellationToken: CancellationToken.None)).As<CommandResult>();
 
             // Assert
             Assert.IsFalse(condition: commandResult.Success);
@@ -62,7 +63,7 @@
 
             // Act
             var dispatcher = this.GetDispatcher();
-            var commandResult = (await dispatcher.Command(command: insertCustomerCommand)).As<CommandResult>();
+            var commandResult = (await dispatcher.Command(command: insertCustomerCommand, cancellationToken: CancellationToken.None)).As<CommandResult>();
 
             // Assert
             Assert.IsFalse(condition: commandResult.Success);
@@ -82,7 +83,7 @@
 
             // Act
             var dispatcher = this.GetDispatcher();
-            var commandResult = (await dispatcher.Command(command: insertCustomerCommand)).As<CommandResult>();
+            var commandResult = (await dispatcher.Command(command: insertCustomerCommand, cancellationToken: CancellationToken.None)).As<CommandResult>();
 
             // Assert
             Assert.IsFalse(condition: commandResult.Success);
@@ -102,7 +103,7 @@
 
             // Act
             var dispatcher = this.GetDispatcher();
-            var commandResult = (await dispatcher.Command(command: insertCustomerCommand)).As<CommandResult>();
+            var commandResult = (await dispatcher.Command(command: insertCustomerCommand, cancellationToken: CancellationToken.None)).As<CommandResult>();
 
             // Assert
             Assert.IsFalse(condition: commandResult.Success);
@@ -118,7 +119,7 @@
 
             // Act
             var dispatcher = this.GetDispatcher();
-            var commandResult = (await dispatcher.Command(command: insertCustomerCommand)).As<CommandResult>();
+            var commandResult = (await dispatcher.Command(command: insertCustomerCommand, cancellationToken: CancellationToken.None)).As<CommandResult>();
 
             // Assert
             Assert.IsFalse(condition: commandResult.Success);

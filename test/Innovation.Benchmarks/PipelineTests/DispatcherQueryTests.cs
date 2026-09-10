@@ -34,7 +34,7 @@
         [Benchmark]
         public async ValueTask<BlankQueryResult> DispatchBlankQuery()
         {
-            return await dispatcher.Query<BlankQuery, BlankQueryResult>(query: blankQuery);
+            return await dispatcher.Query<BlankQuery, BlankQueryResult>(query: blankQuery, cancellationToken: System.Threading.CancellationToken.None);
         }
 
         #endregion Methods

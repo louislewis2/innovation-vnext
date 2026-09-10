@@ -37,13 +37,13 @@
         [Benchmark(Baseline = true)]
         public async ValueTask DispatchMessage()
         {
-            await dispatcher.Message(message: blankMessage);
+            await dispatcher.Message(message: blankMessage, cancellationToken: System.Threading.CancellationToken.None);
         }
 
         [Benchmark]
         public async ValueTask DispatchMessageFor()
         {
-            await dispatcher.MessageFor(message: blankMessage, addresses: addresses);
+            await dispatcher.MessageFor(message: blankMessage, cancellationToken: System.Threading.CancellationToken.None, addresses: addresses);
         }
 
         #endregion Methods

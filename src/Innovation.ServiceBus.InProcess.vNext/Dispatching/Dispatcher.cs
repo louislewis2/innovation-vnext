@@ -2,6 +2,7 @@
 {
     using System;
     using System.Linq;
+    using System.Threading;
     using System.Threading.Tasks;
     using System.Collections.Generic;
     using Microsoft.Extensions.Logging;
@@ -131,7 +132,7 @@
             this.serviceScope?.Dispose();
         }
 
-        public async ValueTask<ICommandResult> Command<TCommand>([DisallowNull] TCommand command, bool suppressExceptions = true) where TCommand : ICommand
+        public async ValueTask<ICommandResult> Command<TCommand>([DisallowNull] TCommand command, CancellationToken cancellationToken, bool suppressExceptions = true) where TCommand : ICommand
         {
             // Audit-store presence is memoized after the first call (see InnovationRuntime.HasAuditStoreRegistered),
             // so checking it up front lets us skip starting the stopwatch entirely when there is no audit store to time for.
@@ -274,7 +275,7 @@
                                         DispatcherLogging.CommandInterceptorGoingToRun(logger: this.logger, commandInterceptorType: commandInterceptor.GetType());
                                     }
 
-                                    await commandInterceptor.Intercept(command: command);
+                                    await commandInterceptor.Intercept(command: command, cancellationToken: cancellationToken);
                                 }
                                 catch (Exception ex)
                                 {
@@ -330,7 +331,7 @@
                         {
                             foreach (var commandValidator in commandValidators)
                             {
-                                var intermediateValidationResult = await commandValidator.Validate(command: command);
+                                var intermediateValidationResult = await commandValidator.Validate(command: command, cancellationToken: cancellationToken);
 
                                 if (!intermediateValidationResult.Success)
                                 {
@@ -367,11 +368,11 @@
                 {
                     finalResult = aggregateValidationResult != null && !aggregateValidationResult.Success
                         ? aggregateValidationResult
-                        : await commandHandler.Handle(command: command);
+                        : await commandHandler.Handle(command: command, cancellationToken: cancellationToken);
                 }
                 else
                 {
-                    finalResult = validationResult ?? (commandResult == null ? await commandHandler.Handle(command: command) : commandResult.Success ? await commandHandler.Handle(command: command) : commandResult);
+                    finalResult = validationResult ?? (commandResult == null ? await commandHandler.Handle(command: command, cancellationToken: cancellationToken) : commandResult.Success ? await commandHandler.Handle(command: command, cancellationToken: cancellationToken) : commandResult);
                 }
 
                 // If the command has result reactors registered, queue them to run safely in the background
@@ -408,7 +409,8 @@
                         await auditStore.Log(
                             auditContext: new AuditContext(correlationId: this.CorrelationId, runtimeMilliSeconds: (long)stopWatch.GetElapsedTime().TotalMilliseconds),
                             command: command,
-                            commandResult: finalResult);
+                            commandResult: finalResult,
+                            cancellationToken: cancellationToken);
                     }
                 }
 
@@ -429,7 +431,7 @@
             }
         }
 
-        public async ValueTask Message<TMessage>([DisallowNull] TMessage message) where TMessage : IMessage
+        public async ValueTask Message<TMessage>([DisallowNull] TMessage message, CancellationToken cancellationToken) where TMessage : IMessage
         {
             // Same memoized fast path Command uses: when no IAuditStore is registered there is nothing to time,
             // so neither the stopwatch nor the per-dispatch IAuditStore resolution needs to happen at all.
@@ -472,12 +474,12 @@
 
                 if (auditStore != null)
                 {
-                    await auditStore.Log(auditContext: new AuditContext(correlationId: this.CorrelationId, runtimeMilliSeconds: (long)stopWatch.GetElapsedTime().TotalMilliseconds), message: message);
+                    await auditStore.Log(auditContext: new AuditContext(correlationId: this.CorrelationId, runtimeMilliSeconds: (long)stopWatch.GetElapsedTime().TotalMilliseconds), message: message, cancellationToken: cancellationToken);
                 }
 
                 foreach (var handler in handlers)
                 {
-                    await handler.Handle(message: message);
+                    await handler.Handle(message: message, cancellationToken: cancellationToken);
                 }
             }
             catch (Exception ex)
@@ -488,7 +490,7 @@
             }
         }
 
-        public async ValueTask MessageFor<TMessage>([DisallowNull] TMessage message, [DisallowNull] params string[] addresses) where TMessage : IMessage
+        public async ValueTask MessageFor<TMessage>([DisallowNull] TMessage message, CancellationToken cancellationToken, [DisallowNull] params string[] addresses) where TMessage : IMessage
         {
             var hasAuditStoreRegistered = this.innovationRuntime.HasAuditStoreRegistered(this.serviceScope.ServiceProvider);
             var stopWatch = hasAuditStoreRegistered ? ValueStopwatch.StartNew() : default;
@@ -536,12 +538,12 @@
 
                 if (auditStore != null)
                 {
-                    await auditStore.Log(auditContext: new AuditContext(correlationId: this.CorrelationId, runtimeMilliSeconds: (long)stopWatch.GetElapsedTime().TotalMilliseconds), message: message);
+                    await auditStore.Log(auditContext: new AuditContext(correlationId: this.CorrelationId, runtimeMilliSeconds: (long)stopWatch.GetElapsedTime().TotalMilliseconds), message: message, cancellationToken: cancellationToken);
                 }
 
                 foreach (var handler in addressableHandlers)
                 {
-                    await handler.Handle(message: message);
+                    await handler.Handle(message: message, cancellationToken: cancellationToken);
                 }
             }
             catch (Exception ex)
@@ -552,7 +554,7 @@
             }
         }
 
-        public async ValueTask<TQueryResult> Query<TQuery, TQueryResult>([DisallowNull] TQuery query) where TQuery : IQuery where TQueryResult : IQueryResult
+        public async ValueTask<TQueryResult> Query<TQuery, TQueryResult>([DisallowNull] TQuery query, CancellationToken cancellationToken) where TQuery : IQuery where TQueryResult : IQueryResult
         {
             // Same memoized fast path Command uses - previously this method resolved IAuditStore from DI and
             // started a stopwatch on every single dispatch, even for the (overwhelmingly common) case where no
@@ -633,10 +635,10 @@
 
                 if (auditStore != null)
                 {
-                    await auditStore.Log(auditContext: new AuditContext(correlationId: this.CorrelationId, runtimeMilliSeconds: (long)stopWatch.GetElapsedTime().TotalMilliseconds), query: query);
+                    await auditStore.Log(auditContext: new AuditContext(correlationId: this.CorrelationId, runtimeMilliSeconds: (long)stopWatch.GetElapsedTime().TotalMilliseconds), query: query, cancellationToken: cancellationToken);
                 }
 
-                return await queryHandler.Handle(query);
+                return await queryHandler.Handle(query, cancellationToken);
             }
             catch (Exception ex)
             {
@@ -646,7 +648,7 @@
             }
         }
 
-        public async ValueTask<TQueryResult> QueryFor<TQuery, TQueryResult>([DisallowNull] TQuery query, [DisallowNull] params string[] addresses) where TQuery : IQuery where TQueryResult : IQueryResult
+        public async ValueTask<TQueryResult> QueryFor<TQuery, TQueryResult>([DisallowNull] TQuery query, CancellationToken cancellationToken, [DisallowNull] params string[] addresses) where TQuery : IQuery where TQueryResult : IQueryResult
         {
             var hasAuditStoreRegistered = this.innovationRuntime.HasAuditStoreRegistered(this.serviceScope.ServiceProvider);
             var stopWatch = hasAuditStoreRegistered ? ValueStopwatch.StartNew() : default;
@@ -707,10 +709,10 @@
 
                 if (auditStore != null)
                 {
-                    await auditStore.Log(auditContext: new AuditContext(correlationId: this.CorrelationId, runtimeMilliSeconds: (long)stopWatch.GetElapsedTime().TotalMilliseconds), query: query);
+                    await auditStore.Log(auditContext: new AuditContext(correlationId: this.CorrelationId, runtimeMilliSeconds: (long)stopWatch.GetElapsedTime().TotalMilliseconds), query: query, cancellationToken: cancellationToken);
                 }
 
-                return await queryHandler.Handle(query);
+                return await queryHandler.Handle(query, cancellationToken);
             }
             catch (Exception ex)
             {

@@ -1,6 +1,7 @@
 ﻿namespace Innovation.ServiceBus.InProcess.Tests
 {
     using System;
+    using System.Threading;
     using System.Threading.Tasks;
     using System.Collections.Generic;
     using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -29,7 +30,7 @@
 
             // Act
             var dispatcher = this.GetDispatcher();
-            var updateCustomerCommandResult = (await dispatcher.Command(command: updateCustomerCommand)).As<CommandResult>();
+            var updateCustomerCommandResult = (await dispatcher.Command(command: updateCustomerCommand, cancellationToken: CancellationToken.None)).As<CommandResult>();
 
             // Assert
             Assert.IsFalse(condition: updateCustomerCommandResult.Success);
@@ -51,7 +52,7 @@
             // Act
             var dispatcher = this.GetDispatcher();
             dispatcher.SetContext(dispatcherContext: sharedDispatcherContext);
-            var updateCustomerCommandResult = (await dispatcher.Command(command: updateCustomerCommand)).As<CommandResult>();
+            var updateCustomerCommandResult = (await dispatcher.Command(command: updateCustomerCommand, cancellationToken: CancellationToken.None)).As<CommandResult>();
 
             // Assert
             Assert.IsTrue(condition: updateCustomerCommandResult.Success);

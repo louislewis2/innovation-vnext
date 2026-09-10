@@ -1,6 +1,7 @@
 ﻿namespace Innovation.ServiceBus.InProcess.Tests
 {
     using System;
+    using System.Threading;
     using System.Threading.Tasks;
     using System.Collections.Concurrent;
     using Microsoft.Extensions.DependencyInjection;
@@ -28,7 +29,7 @@
             var dispatcher = this.GetDispatcher();
 
             // Act
-            var result = await dispatcher.Command(command: command, suppressExceptions: false);
+            var result = await dispatcher.Command(command: command, cancellationToken: CancellationToken.None, suppressExceptions: false);
 
             // Assert - dispatch must complete and return successfully without the caller having to wait for
             // any reactor to run. Reactor timing itself is covered by the benchmark suite, not this test.
@@ -45,7 +46,7 @@
             dispatcher.SetCorrelationId(correlationId: correlationId);
 
             // Act
-            var result = await dispatcher.Command(command: command, suppressExceptions: false);
+            var result = await dispatcher.Command(command: command, cancellationToken: CancellationToken.None, suppressExceptions: false);
 
             // Assert - the handler implements ICorrelationAware and records under whatever correlation id it
             // was given, so finding the key proves the dispatcher stamped the handler rather than the command.
@@ -65,7 +66,7 @@
             var waitForReactorTask = ReactorTestSignal.WaitForCommandReactor(correlationId: correlationId);
 
             // Act
-            var result = await dispatcher.Command(command: command, suppressExceptions: false);
+            var result = await dispatcher.Command(command: command, cancellationToken: CancellationToken.None, suppressExceptions: false);
 
             var ranInFreshScope = await waitForReactorTask.WaitAsync(timeout: waitTimeout);
 
@@ -86,7 +87,7 @@
             var waitForReactorTask = ReactorTestSignal.WaitForCommandResultReactor(correlationId: correlationId);
 
             // Act
-            var result = await dispatcher.Command(command: command, suppressExceptions: false);
+            var result = await dispatcher.Command(command: command, cancellationToken: CancellationToken.None, suppressExceptions: false);
 
             var ranInFreshScope = await waitForReactorTask.WaitAsync(timeout: waitTimeout);
 
@@ -132,7 +133,7 @@
             TestAuditStore.LoggedCommands.Clear();
 
             // Act
-            var result = await dispatcher.Command(command: new ReactorTestCommand(), suppressExceptions: false);
+            var result = await dispatcher.Command(command: new ReactorTestCommand(), cancellationToken: CancellationToken.None, suppressExceptions: false);
 
             // Assert
             Assert.IsTrue(condition: result.Success);
@@ -150,16 +151,16 @@
         {
             public static ConcurrentBag<ICommand> LoggedCommands { get; } = new ConcurrentBag<ICommand>();
 
-            public Task Log(AuditContext auditContext, ICommand command, ICommandResult commandResult)
+            public Task Log(AuditContext auditContext, ICommand command, ICommandResult commandResult, CancellationToken cancellationToken)
             {
                 LoggedCommands.Add(command);
 
                 return Task.CompletedTask;
             }
 
-            public Task Log(AuditContext auditContext, IQuery query) => Task.CompletedTask;
+            public Task Log(AuditContext auditContext, IQuery query, CancellationToken cancellationToken) => Task.CompletedTask;
 
-            public Task Log(AuditContext auditContext, IMessage message) => Task.CompletedTask;
+            public Task Log(AuditContext auditContext, IMessage message, CancellationToken cancellationToken) => Task.CompletedTask;
         }
 
         #endregion Test Doubles

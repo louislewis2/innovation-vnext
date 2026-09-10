@@ -1,5 +1,6 @@
 ﻿namespace Innovation.Benchmarks.Comparison.InnovationLib
 {
+    using System.Threading;
     using System.Threading.Tasks;
 
     using Innovation.Api.vNext.Commanding;
@@ -11,7 +12,7 @@
     {
         private static readonly ICommandResult commandResult = new CommandResult();
 
-        public ValueTask<ICommandResult> Handle(BlankCommand command)
+        public ValueTask<ICommandResult> Handle(BlankCommand command, CancellationToken cancellationToken)
         {
             return ValueTask.FromResult(commandResult);
         }

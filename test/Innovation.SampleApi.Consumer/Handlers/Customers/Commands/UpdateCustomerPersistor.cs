@@ -1,5 +1,6 @@
 ﻿namespace Innovation.SampleApi.Consumer.Handlers.Customers.Commands
 {
+    using System.Threading;
     using System.Threading.Tasks;
 
     using Innovation.Api.vNext.Commanding;
@@ -11,16 +12,16 @@
     {
         #region Methods
 
-        public async ValueTask<ICommandResult> Handle(UpdateCustomerCommand command)
+        public async ValueTask<ICommandResult> Handle(UpdateCustomerCommand command, CancellationToken cancellationToken)
         {
-            return await this.Persist(command: command);
+            return await this.Persist(command: command, cancellationToken: cancellationToken);
         }
 
         #endregion Methods
 
         #region Private Methods
 
-        private async ValueTask<ICommandResult> Persist(UpdateCustomerCommand command)
+        private async ValueTask<ICommandResult> Persist(UpdateCustomerCommand command, CancellationToken cancellationToken)
         {
             var commandResult = new CommandResult();
 

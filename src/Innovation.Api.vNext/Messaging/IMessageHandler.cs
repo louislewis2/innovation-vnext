@@ -1,5 +1,6 @@
 ﻿namespace Innovation.Api.vNext.Messaging
 {
+    using System.Threading;
     using System.Threading.Tasks;
     using System.Diagnostics.CodeAnalysis;
 
@@ -13,6 +14,6 @@
         /// </summary>
         /// <param name="message"></param>
         /// <returns></returns>
-        ValueTask Handle([DisallowNull] TMessage message);
+        ValueTask Handle([DisallowNull] TMessage message, CancellationToken cancellationToken);
     }
 }

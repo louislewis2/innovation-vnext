@@ -50,7 +50,7 @@
 
                     var insertLogEntryCriteria = new InsertLogEntryCriteria(message: message);
                     var insertLogEntryCommand = new InsertLogEntryCommand(insertLogEntryCriteria: insertLogEntryCriteria);
-                    var insertLogEntryCommandResult = await dispatcher.Command(command: insertLogEntryCommand);
+                    var insertLogEntryCommandResult = await dispatcher.Command(command: insertLogEntryCommand, cancellationToken: CancellationToken.None);
 
                     this.logger.LogInformation(message: message);
                 }

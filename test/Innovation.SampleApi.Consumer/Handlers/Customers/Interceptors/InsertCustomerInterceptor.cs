@@ -1,6 +1,7 @@
 ﻿namespace Innovation.SampleApi.Consumer.Handlers.Customers.Interceptors
 {
     using System;
+    using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.Extensions.Logging;
 
@@ -28,16 +29,16 @@
 
         #region Methods
 
-        public async ValueTask Intercept(InsertCustomerCommand command)
+        public async ValueTask Intercept(InsertCustomerCommand command, CancellationToken cancellationToken)
         {
-            await this.HandleIntercept(command: command);
+            await this.HandleIntercept(command: command, cancellationToken: cancellationToken);
         }
 
         #endregion Methods
 
         #region Private Methods
 
-        private async Task HandleIntercept(InsertCustomerCommand command)
+        private async Task HandleIntercept(InsertCustomerCommand command, CancellationToken cancellationToken)
         {
             try
             {

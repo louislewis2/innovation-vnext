@@ -1,5 +1,6 @@
 ﻿namespace Innovation.SampleApi.Consumer.Handlers.Vendors.Validators
 {
+    using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.Extensions.Logging;
     using System.ComponentModel.DataAnnotations;
@@ -28,7 +29,7 @@
 
         #region Methods
 
-        public ValueTask<IValidationResult> Validate(InsertVendorCommand command)
+        public ValueTask<IValidationResult> Validate(InsertVendorCommand command, CancellationToken cancellationToken)
         {
             var sampleValidationResult = new SampleValidationResult();
 

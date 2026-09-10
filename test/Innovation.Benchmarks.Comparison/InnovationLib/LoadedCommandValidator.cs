@@ -1,5 +1,6 @@
 ﻿namespace Innovation.Benchmarks.Comparison.InnovationLib
 {
+    using System.Threading;
     using System.Threading.Tasks;
 
     using Innovation.Api.vNext.Commanding;
@@ -14,7 +15,7 @@
     {
         private static readonly IValidationResult validResult = new ValidResult();
 
-        public ValueTask<IValidationResult> Validate(LoadedCommand command)
+        public ValueTask<IValidationResult> Validate(LoadedCommand command, CancellationToken cancellationToken)
         {
             return ValueTask.FromResult(validResult);
         }

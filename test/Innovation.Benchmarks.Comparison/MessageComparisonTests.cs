@@ -36,7 +36,7 @@
         [Benchmark(Baseline = true)]
         public async ValueTask Message_Innovation()
         {
-            await this.innovationDispatcher.Message(message: innovationMessage);
+            await this.innovationDispatcher.Message(message: innovationMessage, cancellationToken: System.Threading.CancellationToken.None);
         }
 
         [Benchmark]

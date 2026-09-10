@@ -1,5 +1,6 @@
 ﻿namespace Innovation.SampleApi.Consumer.Handlers.Suppliers.CommandValidators
 {
+    using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.Extensions.Logging;
     using System.ComponentModel.DataAnnotations;
@@ -22,7 +23,7 @@
 
         #region Methods
 
-        public override Task<ICommandResult> Persist()
+        public override Task<ICommandResult> Persist(CancellationToken cancellationToken)
         {
             var sampleValidationResult = new SampleValidationResult();
 

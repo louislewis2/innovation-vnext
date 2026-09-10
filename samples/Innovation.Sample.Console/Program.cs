@@ -1,6 +1,7 @@
 ﻿namespace Innovation.Sample.Console
 {
     using System;
+    using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.DependencyInjection;
@@ -27,7 +28,7 @@
             // Command - Exception
             var createCustomerCriteriaInvalid = CreateCustomerCriteria.Default();
             var createCustomerCommandInvalid = new CreateCustomerCommand(createCustomerCriteria: createCustomerCriteriaInvalid);
-            var createCustomerCommandInvalidResult = await dispatcher.Command(command: createCustomerCommandInvalid);
+            var createCustomerCommandInvalidResult = await dispatcher.Command(command: createCustomerCommandInvalid, cancellationToken: CancellationToken.None);
 
             // Command Create
             var createCustomerCriteria = new CreateCustomerCriteria(
@@ -38,28 +39,28 @@
                 phoneNumber: "5555555");
 
             var createCustomerCommand = new CreateCustomerCommand(createCustomerCriteria: createCustomerCriteria);
-            var createCustomerCommandResult = await dispatcher.Command(command: createCustomerCommand);
+            var createCustomerCommandResult = await dispatcher.Command(command: createCustomerCommand, cancellationToken: CancellationToken.None);
             var createdCustomerId = Guid.Parse(((CommandResult)createCustomerCommandResult).RecordId);
 
             // Query Paged
             var queryPage = new QueryPage();
-            var queryPagedResult = await dispatcher.Query<QueryPage, GenericResultsList<CustomerLite>>(query: queryPage);
+            var queryPagedResult = await dispatcher.Query<QueryPage, GenericResultsList<CustomerLite>>(query: queryPage, cancellationToken: CancellationToken.None);
 
             // Query Single Lite
             var getCustomerQuery = new GetCustomerQuery(customerId: createdCustomerId);
-            var customerLite = await dispatcher.Query<GetCustomerQuery, CustomerLite>(getCustomerQuery);
+            var customerLite = await dispatcher.Query<GetCustomerQuery, CustomerLite>(getCustomerQuery, CancellationToken.None);
 
             // Query Single Detail
-            var customerDetail = await dispatcher.Query<GetCustomerQuery, CustomerDetail>(query: getCustomerQuery);
+            var customerDetail = await dispatcher.Query<GetCustomerQuery, CustomerDetail>(query: getCustomerQuery, cancellationToken: CancellationToken.None);
 
             // Command Delete
             var deleteCommand = new DeleteCustomerCommand(customerId: createdCustomerId);
-            var deleteResult = await dispatcher.Command(command: deleteCommand);
+            var deleteResult = await dispatcher.Command(command: deleteCommand, cancellationToken: CancellationToken.None);
 
             // Message
             var exception = new NotImplementedException("Lets throw an exception");
             var exceptionMessage = new ExceptionMessage { Exception = exception };
-            await dispatcher.Message(exceptionMessage);
+            await dispatcher.Message(exceptionMessage, CancellationToken.None);
         }
 
         #endregion Methods

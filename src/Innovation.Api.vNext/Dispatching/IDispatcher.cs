@@ -1,5 +1,6 @@
 ﻿namespace Innovation.Api.vNext.Dispatching
 {
+    using System.Threading;
     using System.Threading.Tasks;
     using System.Diagnostics.CodeAnalysis;
 
@@ -15,13 +16,13 @@
     {
         void SetCorrelationId([DisallowNull] string correlationId);
         void SetContext([DisallowNull] IDispatcherContext dispatcherContext);
-        ValueTask<ICommandResult> Command<TCommand>([DisallowNull] TCommand command, bool suppressExceptions = true) where TCommand : ICommand;
-        ValueTask Message<TMessage>([DisallowNull] TMessage message) where TMessage : IMessage;
-        ValueTask MessageFor<TMessage>([DisallowNull] TMessage message, params string[] addresses) where TMessage : IMessage;
-        ValueTask<TQueryResult> Query<TQuery, TQueryResult>([DisallowNull] TQuery query)
+        ValueTask<ICommandResult> Command<TCommand>([DisallowNull] TCommand command, CancellationToken cancellationToken, bool suppressExceptions = true) where TCommand : ICommand;
+        ValueTask Message<TMessage>([DisallowNull] TMessage message, CancellationToken cancellationToken) where TMessage : IMessage;
+        ValueTask MessageFor<TMessage>([DisallowNull] TMessage message, CancellationToken cancellationToken, params string[] addresses) where TMessage : IMessage;
+        ValueTask<TQueryResult> Query<TQuery, TQueryResult>([DisallowNull] TQuery query, CancellationToken cancellationToken)
             where TQueryResult : IQueryResult
             where TQuery : IQuery;
-        ValueTask<TQueryResult> QueryFor<TQuery, TQueryResult>([DisallowNull] TQuery query, params string[] addresses)
+        ValueTask<TQueryResult> QueryFor<TQuery, TQueryResult>([DisallowNull] TQuery query, CancellationToken cancellationToken, params string[] addresses)
             where TQueryResult : IQueryResult
             where TQuery : IQuery;
     }

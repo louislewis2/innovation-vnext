@@ -1,5 +1,6 @@
 ﻿namespace Innovation.SampleApi.Consumer.Handlers.ReactorTest
 {
+    using System.Threading;
     using System.Threading.Tasks;
 
     using Innovation.Api.vNext.Core;
@@ -38,7 +39,7 @@
 
         #region Methods
 
-        public ValueTask<ICommandResult> Handle(ReactorTestCommand command)
+        public ValueTask<ICommandResult> Handle(ReactorTestCommand command, CancellationToken cancellationToken)
         {
             ReactorTestSignal.RecordDispatchScopeId(correlationId: this.CorrelationId, scopeId: this.scopeMarker.Id);
 

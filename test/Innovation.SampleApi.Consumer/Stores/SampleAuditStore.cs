@@ -1,5 +1,6 @@
 ﻿namespace Innovation.SampleApi.Consumer.Stores
 {
+    using System.Threading;
     using System.Threading.Tasks;
     using System.Collections.Generic;
 
@@ -34,21 +35,21 @@
 
         #region Methods
 
-        public Task Log(AuditContext auditContext, ICommand command, ICommandResult commandResult)
+        public Task Log(AuditContext auditContext, ICommand command, ICommandResult commandResult, CancellationToken cancellationToken)
         {
             this.InsertEvent(auditContext: auditContext, @event: command);
 
             return Task.CompletedTask;
         }
 
-        public Task Log(AuditContext auditContext, IQuery query)
+        public Task Log(AuditContext auditContext, IQuery query, CancellationToken cancellationToken)
         {
             this.InsertEvent(auditContext: auditContext, @event: query);
 
             return Task.CompletedTask;
         }
 
-        public Task Log(AuditContext auditContext, IMessage message)
+        public Task Log(AuditContext auditContext, IMessage message, CancellationToken cancellationToken)
         {
             this.InsertEvent(auditContext: auditContext, @event: message);
 

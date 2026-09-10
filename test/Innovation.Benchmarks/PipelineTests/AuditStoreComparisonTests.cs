@@ -38,10 +38,10 @@
         }
 
         [Benchmark(Baseline = true)]
-        public async ValueTask<ICommandResult> AuditStoreNotRegistered() => await dispatcherWithoutAuditStore.Command(command: blankCommand);
+        public async ValueTask<ICommandResult> AuditStoreNotRegistered() => await dispatcherWithoutAuditStore.Command(command: blankCommand, cancellationToken: System.Threading.CancellationToken.None);
 
         [Benchmark]
-        public async ValueTask<ICommandResult> AuditStoreRegistered() => await dispatcherWithAuditStore.Command(command: blankCommand);
+        public async ValueTask<ICommandResult> AuditStoreRegistered() => await dispatcherWithAuditStore.Command(command: blankCommand, cancellationToken: System.Threading.CancellationToken.None);
 
         #endregion Methods
 

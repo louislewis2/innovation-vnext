@@ -2,6 +2,7 @@
 {
     using System;
     using System.Text.Json;
+    using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
@@ -41,7 +42,7 @@
 
         #region Methods
 
-        public async Task Log(AuditContext auditContext, ICommand command, ICommandResult commandResult)
+        public async Task Log(AuditContext auditContext, ICommand command, ICommandResult commandResult, CancellationToken cancellationToken)
         {
             if (!this.innovationAuditSettings.EnableCommandAudits)
             {
@@ -51,10 +52,11 @@
             await this.InsertCommandAudit(
                 auditContext: auditContext,
                 command: command,
-                commandResult: commandResult);
+                commandResult: commandResult,
+                cancellationToken: cancellationToken);
         }
 
-        public async Task Log(AuditContext auditContext, IQuery query)
+        public async Task Log(AuditContext auditContext, IQuery query, CancellationToken cancellationToken)
         {
             if (!this.innovationAuditSettings.EnableQueryAudits)
             {
@@ -63,10 +65,11 @@
 
             await this.InsertQueryAudit(
                 auditContext: auditContext,
-                query: query);
+                query: query,
+                cancellationToken: cancellationToken);
         }
 
-        public Task Log(AuditContext auditContext, IMessage message)
+        public Task Log(AuditContext auditContext, IMessage message, CancellationToken cancellationToken)
         {
             return Task.CompletedTask;
         }
@@ -75,7 +78,7 @@
 
         #region Private Methods
 
-        private async Task InsertCommandAudit(AuditContext auditContext, ICommand command, ICommandResult commandResult)
+        private async Task InsertCommandAudit(AuditContext auditContext, ICommand command, ICommandResult commandResult, CancellationToken cancellationToken)
         {
             try
             {
@@ -91,7 +94,7 @@
                     runtimeMilliSeconds: auditContext.RuntimeMilliSeconds);
 
                 this.auditDbContext.Add(entity: commandAuditEntryAnemic);
-                await this.auditDbContext.SaveChangesAsync();
+                await this.auditDbContext.SaveChangesAsync(cancellationToken);
             }
             catch (Exception ex)
             {
@@ -99,7 +102,7 @@
             }
         }
 
-        private async Task InsertQueryAudit(AuditContext auditContext, IQuery query)
+        private async Task InsertQueryAudit(AuditContext auditContext, IQuery query, CancellationToken cancellationToken)
         {
             try
             {
@@ -113,7 +116,7 @@
                     runtimeMilliSeconds: auditContext.RuntimeMilliSeconds);
 
                 this.auditDbContext.Add(entity: queryAuditEntryAnemic);
-                await this.auditDbContext.SaveChangesAsync();
+                await this.auditDbContext.SaveChangesAsync(cancellationToken);
             }
             catch (Exception ex)
             {

@@ -1,5 +1,6 @@
 ﻿namespace Innovation.Benchmarks.Comparison.InnovationLib
 {
+    using System.Threading;
     using System.Threading.Tasks;
 
     using Innovation.Api.vNext.Querying;
@@ -11,7 +12,7 @@
     {
         private static readonly BlankQueryResult queryResult = new BlankQueryResult();
 
-        public ValueTask<BlankQueryResult> Handle(BlankQuery query)
+        public ValueTask<BlankQueryResult> Handle(BlankQuery query, CancellationToken cancellationToken)
         {
             return ValueTask.FromResult(queryResult);
         }

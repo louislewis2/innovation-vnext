@@ -1,6 +1,7 @@
 ﻿namespace Innovation.Sample.Web.Controllers
 {
     using System;
+    using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.AspNetCore.Mvc;
 
@@ -29,11 +30,11 @@
         [HttpGet]
         [ProducesResponseType(type: typeof(GenericResultsList<CustomerLite>), statusCode: 200)]
         [ProducesResponseType(type: typeof(CommandResult), statusCode: 400)]
-        public async Task<IActionResult> Query(QueryPage queryPage)
+        public async Task<IActionResult> Query(QueryPage queryPage, CancellationToken cancellationToken)
         {
             try
             {
-                var genericResultsList = await this.Query<QueryPage, GenericResultsList<CustomerLite>>(query: queryPage);
+                var genericResultsList = await this.Query<QueryPage, GenericResultsList<CustomerLite>>(query: queryPage, cancellationToken: cancellationToken);
 
                 return this.Ok(value: genericResultsList);
             }
@@ -51,13 +52,13 @@
         [ProducesResponseType(type: typeof(CustomerLite), statusCode: 200)]
         [ProducesResponseType(type: typeof(CommandResult), statusCode: 400)]
         [HttpGet("{customerId:Guid}")]
-        public async Task<IActionResult> Single(Guid customerId)
+        public async Task<IActionResult> Single(Guid customerId, CancellationToken cancellationToken)
         {
             try
             {
                 var getCustomerQuery = new GetCustomerQuery(customerId: customerId);
 
-                return await this.Query<GetCustomerQuery, CustomerLite>(query: getCustomerQuery, customerId);
+                return await this.Query<GetCustomerQuery, CustomerLite>(query: getCustomerQuery, customerId, cancellationToken);
             }
             catch (Exception ex)
             {
@@ -73,7 +74,7 @@
         [ProducesResponseType(type: typeof(CommandResult), statusCode: 200)]
         [ProducesResponseType(type: typeof(CommandResult), statusCode: 400)]
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] CreateCustomerCriteria createCustomerCriteria)
+        public async Task<IActionResult> Create([FromBody] CreateCustomerCriteria createCustomerCriteria, CancellationToken cancellationToken)
         {
             try
             {
@@ -84,7 +85,7 @@
 
                 var createCustomerCommand = new CreateCustomerCommand(createCustomerCriteria: createCustomerCriteria);
 
-                return await this.Command(command: createCustomerCommand);
+                return await this.Command(command: createCustomerCommand, cancellationToken: cancellationToken);
             }
             catch (Exception ex)
             {
@@ -100,7 +101,7 @@
         [ProducesResponseType(type: typeof(CommandResult), statusCode: 200)]
         [ProducesResponseType(type: typeof(CommandResult), statusCode: 400)]
         [HttpDelete("{customerId:Guid}")]
-        public async Task<IActionResult> Delete(Guid customerId)
+        public async Task<IActionResult> Delete(Guid customerId, CancellationToken cancellationToken)
         {
             try
             {
@@ -111,7 +112,7 @@
 
                 var deleteCustomerCommand = new DeleteCustomerCommand(customerId: customerId);
 
-                return await this.Command(command: deleteCustomerCommand);
+                return await this.Command(command: deleteCustomerCommand, cancellationToken: cancellationToken);
             }
             catch (Exception ex)
             {

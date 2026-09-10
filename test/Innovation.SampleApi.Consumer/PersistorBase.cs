@@ -1,6 +1,7 @@
 ﻿namespace Innovation.SampleApi.Consumer
 {
     using System;
+    using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.Extensions.Logging;
 
@@ -30,13 +31,13 @@
 
         #region Methods
 
-        public async ValueTask<ICommandResult> Handle(T command)
+        public async ValueTask<ICommandResult> Handle(T command, CancellationToken cancellationToken)
         {
             try
             {
                 this.command = command;
 
-                return await this.Persist();
+                return await this.Persist(cancellationToken: cancellationToken);
             }
             catch(Exception ex)
             {
@@ -61,7 +62,7 @@
             return this.commandResult;
         }
 
-        public abstract Task<ICommandResult> Persist();
+        public abstract Task<ICommandResult> Persist(CancellationToken cancellationToken);
 
         #endregion Methods
     }

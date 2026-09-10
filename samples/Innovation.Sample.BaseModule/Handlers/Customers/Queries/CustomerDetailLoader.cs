@@ -1,5 +1,6 @@
 ﻿namespace Innovation.Sample.BaseModule.Handlers.Customers.Queries
 {
+    using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.Extensions.Logging;
     using Microsoft.EntityFrameworkCore;
@@ -32,20 +33,20 @@
 
         #region Methods
 
-        public async ValueTask<CustomerDetail> Handle(GetCustomerQuery query)
+        public async ValueTask<CustomerDetail> Handle(GetCustomerQuery query, CancellationToken cancellationToken)
         {
-            return await Load(query: query);
+            return await Load(query: query, cancellationToken: cancellationToken);
         }
 
         #endregion Methods
 
         #region Private Methods
 
-        private async Task<CustomerDetail> Load(GetCustomerQuery query)
+        private async Task<CustomerDetail> Load(GetCustomerQuery query, CancellationToken cancellationToken)
         {
             var customer = await primaryContext.Customers
                 .AsNoTracking()
-                .FirstOrDefaultAsync(x => x.Id == query.CustomerId);
+                .FirstOrDefaultAsync(x => x.Id == query.CustomerId, cancellationToken);
 
             return customer.ToCustomerDetail();
         }

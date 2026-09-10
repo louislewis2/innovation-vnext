@@ -1,5 +1,6 @@
 ﻿namespace Innovation.ServiceBus.InProcess.Tests
 {
+    using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -27,7 +28,7 @@
 
             // Act
             var dispatcher = this.GetDispatcher();
-            var commandResult = (await dispatcher.Command(command: insertSupplierCommand)).As<SampleValidationResult>();
+            var commandResult = (await dispatcher.Command(command: insertSupplierCommand, cancellationToken: CancellationToken.None)).As<SampleValidationResult>();
 
             // Assert
             Assert.IsFalse(condition: commandResult.Success);
@@ -47,7 +48,7 @@
 
             // Act
             var dispatcher = this.GetDispatcher();
-            var commandResult = (await dispatcher.Command(command: insertVendorCommand)).As<SampleValidationResult>();
+            var commandResult = (await dispatcher.Command(command: insertVendorCommand, cancellationToken: CancellationToken.None)).As<SampleValidationResult>();
 
             // Assert
             Assert.IsFalse(condition: commandResult.Success);
@@ -70,7 +71,7 @@
 
             // Act
             var dispatcher = this.GetDispatcher();
-            var commandResult = (await dispatcher.Command(command: insertVendorCommand)).As<SampleValidationResult>();
+            var commandResult = (await dispatcher.Command(command: insertVendorCommand, cancellationToken: CancellationToken.None)).As<SampleValidationResult>();
 
             // Assert
             Assert.IsFalse(condition: commandResult.Success);
@@ -91,7 +92,7 @@
 
             // Act
             var dispatcher = this.GetDispatcher();
-            var commandResult = (await dispatcher.Command(command: insertVendorCommand)).As<CommandResult>();
+            var commandResult = (await dispatcher.Command(command: insertVendorCommand, cancellationToken: CancellationToken.None)).As<CommandResult>();
 
             // Assert
             Assert.IsFalse(condition: commandResult.Success);

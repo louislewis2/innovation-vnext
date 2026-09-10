@@ -1,5 +1,6 @@
 ﻿namespace Innovation.Benchmarks.Comparison.InnovationLib
 {
+    using System.Threading;
     using System.Threading.Tasks;
 
     using Innovation.Api.vNext.Messaging;
@@ -10,7 +11,7 @@
     /// </summary>
     public class BlankMessageHandlerOne : IMessageHandler<BlankMessage>
     {
-        public ValueTask Handle(BlankMessage message)
+        public ValueTask Handle(BlankMessage message, CancellationToken cancellationToken)
         {
             return ValueTask.CompletedTask;
         }

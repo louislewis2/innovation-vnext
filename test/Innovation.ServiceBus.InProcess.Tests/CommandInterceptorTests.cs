@@ -1,5 +1,6 @@
 ﻿namespace Innovation.ServiceBus.InProcess.Tests
 {
+    using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -20,7 +21,7 @@
 
             // Act
             var dispatcher = this.GetDispatcher();
-            var insertCustomerCommandResult = await dispatcher.Command(command: insertCustomerCommand, suppressExceptions: false);
+            var insertCustomerCommandResult = await dispatcher.Command(command: insertCustomerCommand, cancellationToken: CancellationToken.None, suppressExceptions: false);
 
             // Assert
             Assert.IsNotNull(value: insertCustomerCommand.Criteria.ExistsOnGithub);
@@ -38,7 +39,7 @@
 
             // Act
             var dispatcher = this.GetDispatcher();
-            var insertCustomerCommandResult = await dispatcher.Command(command: insertCustomerCommand, suppressExceptions: false);
+            var insertCustomerCommandResult = await dispatcher.Command(command: insertCustomerCommand, cancellationToken: CancellationToken.None, suppressExceptions: false);
 
             // Assert
             Assert.IsNotNull(value: insertCustomerCommand.Criteria.ExistsOnGithub);

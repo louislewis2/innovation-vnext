@@ -53,6 +53,7 @@ dotnet add package Innovation.ServiceBus.InProcess.vNext
 ```
 
 ```csharp
+using System.Threading;
 using System.Threading.Tasks;
 using Innovation.Api.vNext.Commanding;
 using Innovation.Api.vNext.CommandHelpers;
@@ -77,7 +78,7 @@ public class CreateCustomerCommand : ICommand
 // 2. Implement a handler for it
 public class CreateCustomerCommandHandler : ICommandHandler<CreateCustomerCommand>
 {
-    public ValueTask<ICommandResult> Handle(CreateCustomerCommand command)
+    public ValueTask<ICommandResult> Handle(CreateCustomerCommand command, CancellationToken cancellationToken)
     {
         // ... persist the customer ...
         return ValueTask.FromResult<ICommandResult>(new CommandResult());
@@ -92,7 +93,7 @@ var provider = services.BuildServiceProvider();
 
 // 4. Dispatch the command
 var dispatcher = provider.GetRequiredService<IDispatcher>();
-var result = await dispatcher.Command(new CreateCustomerCommand("Louis", "Lewis"));
+var result = await dispatcher.Command(new CreateCustomerCommand("Louis", "Lewis"), CancellationToken.None);
 ```
 
 ---
@@ -149,6 +150,7 @@ It covers command, query, message and pipeline-loaded dispatch, the handler-life
 - Fixed the default benchmark provider to not implicitly register an audit store, so "Blank"/baseline benchmarks measure the framework's true zero-registration floor rather than silently including audit-store overhead; audit-store cost is now tracked explicitly (see Audit Store Comparison Tests)
 - Dispatch-path optimization pass, with no API or behavior change: the dispatcher's built-in logging is guarded by a single `ILogger.IsEnabled` check per dispatch rather than one per call site, `GetServices` resolutions no longer make a redundant array copy, the memoized audit-store fast path extends from `Command` to `Query`/`Message`/`QueryFor`/`MessageFor`, the command-bits lookup is frozen after configuration, and `CorrelationId` is generated lazily
 - `ICorrelationAware` is now consistent across the pipeline: the correlation ID is set on command handlers, query handlers and reactors, never on the command or query itself. Commands that implement `ICorrelationAware` are reported at startup with guidance on where to move the interface
+- Added `CancellationToken` support across the dispatch pipeline: `ICommandHandler`, `IQueryHandler`, `IMessageHandler`, `ICommandInterceptor`, `IValidator`, `IAuditStore` and `IDispatcher` all now accept a `CancellationToken`, threaded end-to-end by the dispatcher. Reactors are intentionally excluded, since they run detached on a background work queue with their own independently managed lifetime
 
 ### Planned
 

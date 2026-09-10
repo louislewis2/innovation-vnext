@@ -45,7 +45,7 @@
         [Benchmark]
         public async ValueTask<ICommandResult> DispatchBlankCommand()
         {
-            return await dispatcher.Command(command: blankCommand);
+            return await dispatcher.Command(command: blankCommand, cancellationToken: System.Threading.CancellationToken.None);
         }
 
         #endregion Methods

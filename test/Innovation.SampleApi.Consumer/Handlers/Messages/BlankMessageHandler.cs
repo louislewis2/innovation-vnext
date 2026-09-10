@@ -1,5 +1,6 @@
 ﻿namespace Innovation.SampleApi.Consumer.Handlers.Messages
 {
+    using System.Threading;
     using System.Threading.Tasks;
 
     using Innovation.Api.vNext.Messaging;
@@ -15,7 +16,7 @@
     {
         #region Methods
 
-        public ValueTask Handle(BlankMessage message)
+        public ValueTask Handle(BlankMessage message, CancellationToken cancellationToken)
         {
             return ValueTask.CompletedTask;
         }

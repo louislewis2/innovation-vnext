@@ -1,6 +1,7 @@
 ﻿namespace Innovation.Sample.Web.Controllers
 {
     using System;
+    using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.AspNetCore.Mvc;
 
@@ -17,9 +18,9 @@
     {
         #region Methods
 
-        public async Task<IActionResult> Index(QueryPage queryPage)
+        public async Task<IActionResult> Index(QueryPage queryPage, CancellationToken cancellationToken)
         {
-            return this.View(await this.Query<QueryPage, GenericResultsList<CustomerLite>>(query: queryPage));
+            return this.View(await this.Query<QueryPage, GenericResultsList<CustomerLite>>(query: queryPage, cancellationToken: cancellationToken));
         }
 
         // GET: Customer/Create
@@ -32,7 +33,7 @@
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(CreateCustomerCriteria createCustomerCriteria)
+        public async Task<IActionResult> Create(CreateCustomerCriteria createCustomerCriteria, CancellationToken cancellationToken)
         {
             if (!ModelState.IsValid)
             {
@@ -40,7 +41,7 @@
             }
 
             var createCustomerCommand = new CreateCustomerCommand(createCustomerCriteria: createCustomerCriteria);
-            var createCustomerCommandResult = await this.Dispatcher.Command(command: createCustomerCommand);
+            var createCustomerCommandResult = await this.Dispatcher.Command(command: createCustomerCommand, cancellationToken: cancellationToken);
 
             if (createCustomerCommandResult.Success)
             {
@@ -54,14 +55,14 @@
         }
 
         // GET: Customer/Details/5
-        public async Task<IActionResult> Details(Guid customerId)
+        public async Task<IActionResult> Details(Guid customerId, CancellationToken cancellationToken)
         {
             if (customerId == default)
             {
                 return NotFound();
             }
 
-            var customer = await this.GetCustomerDetail(customerId: customerId);
+            var customer = await this.GetCustomerDetail(customerId: customerId, cancellationToken: cancellationToken);
 
             if (customer == null)
             {
@@ -72,14 +73,14 @@
         }
 
         // GET: Customer/Edit/5
-        public async Task<IActionResult> Edit(Guid customerId)
+        public async Task<IActionResult> Edit(Guid customerId, CancellationToken cancellationToken)
         {
             if (customerId == default)
             {
                 return NotFound();
             }
 
-            var customer = await this.GetCustomerDetail(customerId: customerId);
+            var customer = await this.GetCustomerDetail(customerId: customerId, cancellationToken: cancellationToken);
 
             if (customer == null)
             {
@@ -98,7 +99,7 @@
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(Guid customerId, UpdateCustomerCriteria updateCustomerCriteria)
+        public async Task<IActionResult> Edit(Guid customerId, UpdateCustomerCriteria updateCustomerCriteria, CancellationToken cancellationToken)
         {
             if (customerId == default)
             {
@@ -111,7 +112,7 @@
             }
 
             var updateCustomerCommand = new UpdateCustomerCommand(customerId: customerId, updateCustomerCriteria: updateCustomerCriteria);
-            var updateCustomerCommandResult = await this.Dispatcher.Command(command: updateCustomerCommand);
+            var updateCustomerCommandResult = await this.Dispatcher.Command(command: updateCustomerCommand, cancellationToken: cancellationToken);
 
             if (updateCustomerCommandResult.Success)
             {
@@ -125,14 +126,14 @@
         }
 
         // GET: Customer/Delete/5
-        public async Task<IActionResult> Delete(Guid customerId)
+        public async Task<IActionResult> Delete(Guid customerId, CancellationToken cancellationToken)
         {
             if (customerId == default)
             {
                 return NotFound();
             }
 
-            var customer = await this.GetCustomerLite(customerId: customerId);
+            var customer = await this.GetCustomerLite(customerId: customerId, cancellationToken: cancellationToken);
 
             if (customer == null)
             {
@@ -145,7 +146,7 @@
         // POST: Customer/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteConfirmed(Guid customerId)
+        public async Task<IActionResult> DeleteConfirmed(Guid customerId, CancellationToken cancellationToken)
         {
             if (customerId == default)
             {
@@ -153,7 +154,7 @@
             }
 
             var deleteCustomerCommand = new DeleteCustomerCommand(customerId: customerId);
-            var deleteCustomerCommandResult = await this.Command(command: deleteCustomerCommand);
+            var deleteCustomerCommandResult = await this.Command(command: deleteCustomerCommand, cancellationToken: cancellationToken);
 
             return RedirectToAction("Index");
         }
@@ -162,16 +163,16 @@
 
         #region Private Methods
 
-        private async Task<CustomerLite> GetCustomerLite(Guid customerId)
+        private async Task<CustomerLite> GetCustomerLite(Guid customerId, CancellationToken cancellationToken)
         {
             var getCustomerQuery = new GetCustomerQuery(customerId: customerId);
-            return await this.Query<GetCustomerQuery, CustomerLite>(getCustomerQuery);
+            return await this.Query<GetCustomerQuery, CustomerLite>(getCustomerQuery, cancellationToken);
         }
 
-        private async Task<CustomerDetail> GetCustomerDetail(Guid customerId)
+        private async Task<CustomerDetail> GetCustomerDetail(Guid customerId, CancellationToken cancellationToken)
         {
             var getCustomerQuery = new GetCustomerQuery(customerId: customerId);
-            return await this.Query<GetCustomerQuery, CustomerDetail>(getCustomerQuery);
+            return await this.Query<GetCustomerQuery, CustomerDetail>(getCustomerQuery, cancellationToken);
         }
 
         #endregion Private Methods

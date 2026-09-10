@@ -46,7 +46,7 @@
             using var scope = this.innovationProvider.CreateScope();
             var dispatcher = scope.ServiceProvider.GetRequiredService<IDispatcher>();
 
-            return await dispatcher.Command(command: innovationCommand);
+            return await dispatcher.Command(command: innovationCommand, cancellationToken: System.Threading.CancellationToken.None);
         }
     }
 }

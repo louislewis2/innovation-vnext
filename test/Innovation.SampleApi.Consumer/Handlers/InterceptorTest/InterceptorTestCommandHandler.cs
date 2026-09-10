@@ -1,5 +1,6 @@
 ﻿namespace Innovation.SampleApi.Consumer.Handlers.InterceptorTest
 {
+    using System.Threading;
     using System.Threading.Tasks;
 
     using Innovation.Api.vNext.Commanding;
@@ -21,7 +22,7 @@
 
         #region Methods
 
-        public ValueTask<ICommandResult> Handle(InterceptorTestCommand command)
+        public ValueTask<ICommandResult> Handle(InterceptorTestCommand command, CancellationToken cancellationToken)
         {
             return ValueTask.FromResult(commandResult);
         }

@@ -43,10 +43,10 @@
         }
 
         [Benchmark(Baseline = true)]
-        public async ValueTask<ICommandResult> FailFast() => await failFastDispatcher.Command(command: invalidVendorCommand);
+        public async ValueTask<ICommandResult> FailFast() => await failFastDispatcher.Command(command: invalidVendorCommand, cancellationToken: System.Threading.CancellationToken.None);
 
         [Benchmark]
-        public async ValueTask<ICommandResult> Aggregate() => await aggregateDispatcher.Command(command: invalidVendorCommand);
+        public async ValueTask<ICommandResult> Aggregate() => await aggregateDispatcher.Command(command: invalidVendorCommand, cancellationToken: System.Threading.CancellationToken.None);
 
         #endregion Methods
 

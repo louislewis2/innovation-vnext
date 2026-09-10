@@ -1,6 +1,7 @@
 ﻿namespace Innovation.Sample.BaseModule.Handlers.Customers.Queries
 {
     using System.Linq;
+    using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.Extensions.Logging;
     using Microsoft.EntityFrameworkCore;
@@ -36,30 +37,30 @@
 
         #region Methods
 
-        public async ValueTask<CustomerLite> Handle(GetCustomerQuery query)
+        public async ValueTask<CustomerLite> Handle(GetCustomerQuery query, CancellationToken cancellationToken)
         {
-            return await Load(query: query);
+            return await Load(query: query, cancellationToken: cancellationToken);
         }
 
-        public async ValueTask<GenericResultsList<CustomerLite>> Handle(QueryPage query)
+        public async ValueTask<GenericResultsList<CustomerLite>> Handle(QueryPage query, CancellationToken cancellationToken)
         {
-            return await Load(query: query);
+            return await Load(query: query, cancellationToken: cancellationToken);
         }
 
         #endregion Methods
 
         #region Private Methods
 
-        private async Task<CustomerLite> Load(GetCustomerQuery query)
+        private async Task<CustomerLite> Load(GetCustomerQuery query, CancellationToken cancellationToken)
         {
             var customer = await primaryContext.Customers
                 .AsNoTracking()
-                .FirstOrDefaultAsync(x => x.Id == query.CustomerId);
+                .FirstOrDefaultAsync(x => x.Id == query.CustomerId, cancellationToken);
 
             return customer.ToCustomerLite();
         }
 
-        private async Task<GenericResultsList<CustomerLite>> Load(QueryPage query)
+        private async Task<GenericResultsList<CustomerLite>> Load(QueryPage query, CancellationToken cancellationToken)
         {
             var serverCount = 0;
             var customersQueryable = primaryContext.Customers
@@ -69,10 +70,10 @@
             // Opt in because it results in a extra database hit
             if (query.IncludeServerCount)
             {
-                serverCount = await customersQueryable.CountAsync();
+                serverCount = await customersQueryable.CountAsync(cancellationToken);
             }
 
-            var itemsPaged = await customersQueryable.Page(queryPage: query).ToArrayAsync();
+            var itemsPaged = await customersQueryable.Page(queryPage: query).ToArrayAsync(cancellationToken);
 
             return new GenericResultsList<CustomerLite>(itemsPaged.ToCustomerLite(), new QueryPagingInfo(query.Page, query.PageSize, serverCount));
         }

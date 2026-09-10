@@ -1,5 +1,6 @@
 ﻿namespace Innovation.SampleApi.Consumer.Handlers.Queries
 {
+    using System.Threading;
     using System.Threading.Tasks;
 
     using Innovation.Api.vNext.Querying;
@@ -20,7 +21,7 @@
 
         #region Methods
 
-        public ValueTask<BlankQueryResult> Handle(BlankQuery query)
+        public ValueTask<BlankQueryResult> Handle(BlankQuery query, CancellationToken cancellationToken)
         {
             return ValueTask.FromResult(queryResult);
         }

@@ -55,15 +55,15 @@
         }
 
         [Benchmark(Baseline = true)]
-        public async ValueTask<ICommandResult> Blank() => await dispatcher.Command(command: blankCommand);
+        public async ValueTask<ICommandResult> Blank() => await dispatcher.Command(command: blankCommand, cancellationToken: System.Threading.CancellationToken.None);
 
         [Benchmark]
-        public async ValueTask<ICommandResult> ReactorAndResultReactor() => await dispatcher.Command(command: reactorCommand);
+        public async ValueTask<ICommandResult> ReactorAndResultReactor() => await dispatcher.Command(command: reactorCommand, cancellationToken: System.Threading.CancellationToken.None);
 
         [Benchmark]
-        public async ValueTask<ICommandResult> Interceptor() => await dispatcher.Command(command: interceptorCommand);
+        public async ValueTask<ICommandResult> Interceptor() => await dispatcher.Command(command: interceptorCommand, cancellationToken: System.Threading.CancellationToken.None);
 
         [Benchmark]
-        public async ValueTask<ICommandResult> DataAnnotationsAndCustomValidator() => await dispatcher.Command(command: vendorCommand);
+        public async ValueTask<ICommandResult> DataAnnotationsAndCustomValidator() => await dispatcher.Command(command: vendorCommand, cancellationToken: System.Threading.CancellationToken.None);
     }
 }

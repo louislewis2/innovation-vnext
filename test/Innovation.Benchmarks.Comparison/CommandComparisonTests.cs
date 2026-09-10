@@ -48,7 +48,7 @@
         [Benchmark(Baseline = true)]
         public async ValueTask<ICommandResult> Command_Innovation()
         {
-            return await this.innovationDispatcher.Command(command: innovationCommand);
+            return await this.innovationDispatcher.Command(command: innovationCommand, cancellationToken: System.Threading.CancellationToken.None);
         }
 
         [Benchmark]

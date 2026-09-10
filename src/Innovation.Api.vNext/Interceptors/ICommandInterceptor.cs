@@ -1,5 +1,6 @@
 ﻿namespace Innovation.Api.vNext.Interceptors
 {
+    using System.Threading;
     using System.Threading.Tasks;
     using System.Diagnostics.CodeAnalysis;
 
@@ -7,6 +8,6 @@
 
     public interface ICommandInterceptor<in TCommand> where TCommand : ICommand
     {
-        ValueTask Intercept([DisallowNull] TCommand command);
+        ValueTask Intercept([DisallowNull] TCommand command, CancellationToken cancellationToken);
     }
 }

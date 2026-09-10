@@ -38,7 +38,7 @@
         [Benchmark(Baseline = true)]
         public async ValueTask<InnovationLib.BlankQueryResult> Query_Innovation()
         {
-            return await this.innovationDispatcher.Query<InnovationLib.BlankQuery, InnovationLib.BlankQueryResult>(query: innovationQuery);
+            return await this.innovationDispatcher.Query<InnovationLib.BlankQuery, InnovationLib.BlankQueryResult>(query: innovationQuery, cancellationToken: System.Threading.CancellationToken.None);
         }
 
         [Benchmark]

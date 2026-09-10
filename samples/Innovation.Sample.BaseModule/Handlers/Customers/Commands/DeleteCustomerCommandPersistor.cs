@@ -2,6 +2,7 @@
 {
     using System;
     using System.Linq;
+    using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.Extensions.Logging;
 
@@ -32,16 +33,16 @@
 
         #region Methods
 
-        public async ValueTask<ICommandResult> Handle(DeleteCustomerCommand command)
+        public async ValueTask<ICommandResult> Handle(DeleteCustomerCommand command, CancellationToken cancellationToken)
         {
-            return await Delete(command: command);
+            return await Delete(command: command, cancellationToken: cancellationToken);
         }
 
         #endregion Methods
 
         #region Private Methods
 
-        private async Task<ICommandResult> Delete(DeleteCustomerCommand command)
+        private async Task<ICommandResult> Delete(DeleteCustomerCommand command, CancellationToken cancellationToken)
         {
             var commandResult = new CommandResult();
 
@@ -58,7 +59,7 @@
                 }
 
                 primaryContext.Customers.Remove(customer);
-                await primaryContext.SaveChangesAsync();
+                await primaryContext.SaveChangesAsync(cancellationToken);
 
                 return commandResult;
             }
