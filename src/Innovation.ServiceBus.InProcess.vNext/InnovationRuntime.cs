@@ -15,6 +15,7 @@
 
     using MiniValidation;
 
+    using Enums;
     using Settings;
     using Dispatching;
     using Exceptions;
@@ -544,10 +545,12 @@
         {
             var commandTypesWithoutHandlers = this.discoveredCommandTypes
                 .Where(commandType => (this.GetCommandBits(commandType: commandType) & (1 << (int)CommandBitTypes.CommandHandlerRegistered)) == 0)
+                .Where(commandType => !this.IsHandlerExpectationSuppressed(type: commandType))
                 .ToArray();
 
             var queryTypesWithoutHandlers = this.discoveredQueryTypes
                 .Where(queryType => !this.queriesWithHandlers.Contains(queryType))
+                .Where(queryType => !this.IsHandlerExpectationSuppressed(type: queryType))
                 .ToArray();
 
             if (commandTypesWithoutHandlers.Length == 0 && queryTypesWithoutHandlers.Length == 0)
@@ -555,20 +558,58 @@
                 return;
             }
 
+            var missingHandlerBehavior = this.innovationOptions.MissingHandlers == MissingHandlerBehavior.Unknown
+                ? MissingHandlerBehavior.Throw
+                : this.innovationOptions.MissingHandlers;
+
+            // Error is reserved for the case where startup is actually about to fail; when tolerated by
+            // configuration the per-type detail drops to Debug so shared libraries do not flood the log.
+            var perTypeLogLevel = missingHandlerBehavior == MissingHandlerBehavior.Throw ? LogLevel.Error : LogLevel.Debug;
+
             foreach (var commandType in commandTypesWithoutHandlers)
             {
-                this.logger.LogError("No ICommandHandler<{CommandType}> is registered for command {CommandType}", commandType, commandType);
+                this.logger.Log(perTypeLogLevel, "No ICommandHandler<{CommandType}> is registered for command {CommandType}", commandType, commandType);
             }
 
             foreach (var queryType in queryTypesWithoutHandlers)
             {
-                this.logger.LogError("No IQueryHandler<{QueryType}, TQueryResult> is registered for query {QueryType}", queryType, queryType);
+                this.logger.Log(perTypeLogLevel, "No IQueryHandler<{QueryType}, TQueryResult> is registered for query {QueryType}", queryType, queryType);
             }
 
-            if (this.innovationOptions.FailFastOnMissingHandlers)
+            if (missingHandlerBehavior == MissingHandlerBehavior.Throw)
             {
                 throw new MissingHandlersException(commandTypesWithoutHandlers: commandTypesWithoutHandlers, queryTypesWithoutHandlers: queryTypesWithoutHandlers);
             }
+
+            if (missingHandlerBehavior == MissingHandlerBehavior.Warn)
+            {
+                var assemblyNames = commandTypesWithoutHandlers
+                    .Concat(queryTypesWithoutHandlers)
+                    .Select(x => x.Assembly.GetName().Name)
+                    .Distinct()
+                    .OrderBy(x => x)
+                    .ToArray();
+
+                this.logger.LogWarning(
+                    "{CommandCount} command(s) and {QueryCount} query(s) have no registered handler (assemblies: {Assemblies}). Enable Debug logging for the full list, or use InnovationOptions.IgnoreMissingHandlersFromAssemblies to suppress.",
+                    commandTypesWithoutHandlers.Length,
+                    queryTypesWithoutHandlers.Length,
+                    string.Join(", ", assemblyNames));
+            }
+        }
+
+        private bool IsHandlerExpectationSuppressed(Type type)
+        {
+            var ignoredAssemblies = this.innovationOptions.IgnoreMissingHandlersFromAssemblies;
+
+            if (ignoredAssemblies == null || ignoredAssemblies.Length == 0)
+            {
+                return false;
+            }
+
+            var assemblyName = type.Assembly.GetName().Name;
+
+            return ignoredAssemblies.Any(x => string.Equals(x, assemblyName, StringComparison.OrdinalIgnoreCase));
         }
 
         // Commands used to be stamped with the correlation id directly; that now happens on the command

@@ -105,7 +105,7 @@
             services.AddLogging();
 
             // Act
-            services.AddInnovationvNext().WithReactorWorkQueue<TestReactorWorkQueue>();
+            services.AddInnovationvNext(innovationOptions => innovationOptions.IgnoreMissingHandlersFromAssemblies = TestBase.TestAssemblyNames).WithReactorWorkQueue<TestReactorWorkQueue>();
             var provider = services.BuildServiceProvider();
 
             // Assert
@@ -125,7 +125,7 @@
             services.AddLogging();
             services.AddConsumer();
 
-            services.AddInnovationvNext().WithAuditStore<TestAuditStore>();
+            services.AddInnovationvNext(innovationOptions => innovationOptions.IgnoreMissingHandlersFromAssemblies = TestBase.TestAssemblyNames).WithAuditStore<TestAuditStore>();
 
             var provider = services.BuildServiceProvider();
             var dispatcher = provider.GetRequiredService<IDispatcher>();

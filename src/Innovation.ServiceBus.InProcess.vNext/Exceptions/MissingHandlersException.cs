@@ -6,8 +6,8 @@
 
     /// <summary>
     /// Thrown from InnovationRuntime.Configure() (i.e. during service registration/app startup, never on a
-    /// per-request path) when InnovationOptions.FailFastOnMissingHandlers is true and one or more discovered
-    /// ICommand/IQuery types have no corresponding handler registered anywhere in the scanned assemblies.
+    /// per-request path) when InnovationOptions.MissingHandlers is Throw and one or more discovered
+    /// ICommand/IQuery types have
     /// Surfacing this at startup means a missing handler is caught immediately, instead of only being
     /// discovered the first time that specific command/query is actually dispatched in production.
     /// </summary>

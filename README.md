@@ -15,11 +15,6 @@ Innovation is **CQRS-first** and uses a **mediator-style dispatch pipeline** int
 
 > Wondering how Innovation compares to other in-process mediator libraries? See **[BENCHMARKS.md](https://github.com/louislewis2/innovation-vnext/blob/master/BENCHMARKS.md#comparison-with-mediatr-and-mediator)** for a reproducible, side-by-side comparison against MediatR and Mediator.
 
-> [!WARNING]
-> **Innovation.vNext is beta software.** The last planned breaking change to the API surface
-> shipped in 1.0.0-beta1, so the public API is expected to stabilize from here toward 1.0.0. The
-> packages currently target **.NET 10 only**. Please weigh that before adopting it.
-
 ---
 
 ## Table of Contents
@@ -152,6 +147,7 @@ It covers command, query, message and pipeline-loaded dispatch, the handler-life
 - Dispatch-path optimization pass, with no API or behavior change: the dispatcher's built-in logging is guarded by a single `ILogger.IsEnabled` check per dispatch rather than one per call site, `GetServices` resolutions no longer make a redundant array copy, the memoized audit-store fast path extends from `Command` to `Query`/`Message`/`QueryFor`/`MessageFor`, the command-bits lookup is frozen after configuration, and `CorrelationId` is generated lazily
 - `ICorrelationAware` is now consistent across the pipeline: the correlation ID is set on command handlers, query handlers and reactors, never on the command or query itself. Commands that implement `ICorrelationAware` are reported at startup with guidance on where to move the interface
 - Added `CancellationToken` support across the dispatch pipeline: `ICommandHandler`, `IQueryHandler`, `IMessageHandler`, `ICommandInterceptor`, `IValidator`, `IAuditStore` and `IDispatcher` all now accept a `CancellationToken`, threaded end-to-end by the dispatcher. Reactors are intentionally excluded, since they run detached on a background work queue with their own independently managed lifetime
+- Startup missing-handler validation is configurable (`Throw`, `Warn`, `Ignore`) and can skip shared-library assemblies
 
 ### Planned
 
@@ -292,6 +288,27 @@ Dispatcher can create or consume an incoming correlation ID.
 
 The Innovation loader can load assemblies from specified locations to support modular architectures.
 
+### Missing Handler Validation
+
+At startup Innovation checks that every discovered command and query has a handler. Configure the
+behavior with `InnovationOptions.MissingHandlers`:
+
+| Value | Behavior |
+|---|---|
+| `Throw` (default) | Logs an error per missing handler and throws `MissingHandlersException`, preventing startup. |
+| `Warn` | Logs a single summary warning and lets the application start. Per-type detail is logged at Debug. |
+| `Ignore` | Lets the application start without a warning. Per-type detail is logged at Debug. |
+
+Applications that reference shared libraries (e.g. a NuGet package of commands and queries whose
+handlers live in another code base) can keep the check on for their own code and skip those assemblies:
+
+```csharp
+services.AddInnovationvNext(options =>
+{
+    options.IgnoreMissingHandlersFromAssemblies = new[] { "Company.Shared.Contracts" };
+});
+```
+
 ---
 
 ## Supported .NET Frameworks
@@ -374,9 +391,7 @@ Innovation.vNext follows [semantic versioning](https://semver.org/):
 - **Minor** for backward-compatible new features
 - **Patch** for bug fixes
 
-While the packages are pre-1.0 and marked alpha, breaking changes may land in minor versions. Once
-1.0 ships, breaking changes will be reserved for major versions. Release notes are published on the
-[releases page](https://github.com/louislewis2/innovation-vnext/releases).
+Release notes are published on the [releases page](https://github.com/louislewis2/innovation-vnext/releases).
 
 ---
 

@@ -1,5 +1,7 @@
 ﻿namespace Innovation.ServiceBus.InProcess.vNext.Settings
 {
+    using Enums;
+
     public class InnovationOptions
     {
         #region Properties
@@ -33,12 +35,19 @@
         // giving up and letting the process exit anyway.
         public System.TimeSpan ReactorQueueShutdownDrainTimeout { get; set; } = System.TimeSpan.FromSeconds(5);
 
-        // When true (default), InnovationRuntime.Configure() throws MissingHandlersException immediately at
-        // startup if any discovered ICommand/IQuery type has no registered handler, instead of only failing
-        // the first time that specific command/query is actually dispatched. Set to false to fall back to
-        // logging an error per missing handler instead of preventing the app from starting.
-        public bool FailFastOnMissingHandlers { get; set; } = true;
+        /// <summary>
+        /// What happens at startup when a discovered ICommand/IQuery type has no registered handler.
+        /// Defaults to <see cref="MissingHandlerBehavior.Throw"/>, which prevents the application from starting.
+        /// Use <see cref="MissingHandlerBehavior.Warn"/> or <see cref="MissingHandlerBehavior.Ignore"/> when the
+        /// application references shared libraries whose handlers live in another code base.
+        /// </summary>
+        public MissingHandlerBehavior MissingHandlers { get; set; } = MissingHandlerBehavior.Throw;
 
+        /// <summary>
+        /// Names of assemblies (e.g. shared NuGet libraries) whose commands and queries are never reported as
+        /// missing a handler. Matching is case-insensitive. Lets the check stay on for the application's own code.
+        /// </summary>
+        public string[] IgnoreMissingHandlersFromAssemblies { get; set; }
         #endregion Properties
     }
 }

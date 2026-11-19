@@ -9,6 +9,13 @@
 
     public class TestBase
     {
+        #region Fields
+
+        // This assembly contains deliberately handler-less commands/queries used by the missing-handler tests.
+        internal static readonly string[] TestAssemblyNames = new[] { "Innovation.ServiceBus.InProcess.Tests" };
+
+        #endregion Fields
+
         #region Constructor
 
         public TestBase() : this(configureOptions: null)
@@ -33,13 +40,18 @@
 
             if (configureOptions == null)
             {
-                services.AddInnovationvNext();
+                services.AddInnovationvNext(innovationOptions =>
+                {
+                    innovationOptions.IsValidationEnabled = true;
+                    innovationOptions.IgnoreMissingHandlersFromAssemblies = TestAssemblyNames;
+                });
             }
             else
             {
                 services.AddInnovationvNext(innovationOptions =>
                 {
                     innovationOptions.IsValidationEnabled = true;
+                    innovationOptions.IgnoreMissingHandlersFromAssemblies = TestAssemblyNames;
                     configureOptions(innovationOptions);
                 });
             }
